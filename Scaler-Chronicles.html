@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>The Scaler Chronicles</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=IM+Fell+English:ital@0;1&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --paper:        #f5efe0;
+      --paper-dark:   #e8dfc8;
+      --ink:          #1a1209;
+      --ink-mid:      #3a2e1e;
+      --ink-faint:    #7a6a52;
+      --rule:         #2a1f0e;
+      --red:          #8b1a1a;
+      --glass-bg:     rgba(245,239,224,0.55);
+      --overlay:      rgba(18,12,4,0.85);
+      --f-head:       'Playfair Display', Georgia, serif;
+      --f-body:       'Libre Baskerville', Georgia, serif;
+      --f-disp:       'IM Fell English', Georgia, serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #2c2418
+        repeating-linear-gradient(90deg,  rgba(0,0,0,.04) 0 1px, transparent 1px 40px)
+        repeating-linear-gradient(0deg,   rgba(0,0,0,.04) 0 1px, transparent 1px 40px);
+      font-family: var(--f-body);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 32px 16px 60px;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; animation: fadeUp .38s cubic-bezier(.22,1,.36,1); }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(18px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── NEWSPAPER SHELL ── */
+    .newspaper {
+      max-width: 960px; margin: 0 auto;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E"),
+        linear-gradient(180deg,#f7f0e0 0%,#ede0c0 100%);
+      background-color: var(--paper);
+      box-shadow: 0 2px 4px rgba(0,0,0,.3), 0 8px 20px rgba(0,0,0,.4),
+                  0 20px 60px rgba(0,0,0,.3), inset 0 0 80px rgba(200,180,140,.15);
+      border: 1px solid #c8b898;
+      padding: 0 0 40px;
+    }
+
+    /* ── MASTHEAD ── */
+    .masthead { border-bottom:4px double var(--rule); padding:18px 24px 12px; text-align:center; background:linear-gradient(180deg,#f0e6cc,var(--paper)); }
+    .masthead::before { content:''; display:block; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); height:6px; margin-bottom:12px; }
+    .newspaper-name { font-family:var(--f-head); font-size:clamp(2.8rem,7vw,5.2rem); font-weight:900; line-height:1; color:var(--ink); text-shadow:2px 2px 0 rgba(0,0,0,.12); }
+    .mast-icon { font-size:1.6rem; margin:0 12px; opacity:.7; }
+    .tagline { font-family:var(--f-disp); font-style:italic; font-size:.78rem; color:var(--ink-mid); letter-spacing:.12em; margin-top:4px; text-transform:uppercase; }
+    .meta-bar { display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); margin-top:10px; padding:4px 0; font-size:.7rem; color:var(--ink-mid); letter-spacing:.08em; text-transform:uppercase; }
+
+    /* ── LABELS & RULES ── */
+    .section-label { display:flex; align-items:center; gap:10px; margin:20px 24px 0; font-family:var(--f-head); font-size:.72rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--paper); }
+    .section-label span { background:var(--ink); padding:3px 10px; }
+    .section-label::after { content:''; flex:1; height:1px; background:var(--ink); opacity:.35; }
+    .h-rule      { border:none; border-top:1px solid var(--rule); margin:0 24px; opacity:.4; }
+    .h-rule-bold { border:none; border-top:3px double var(--rule); margin:0 24px; opacity:.6; }
+
+    /* ── GRIDS ── */
+    .columns { display:grid; padding:16px 24px; }
+    .col-3   { grid-template-columns:repeat(3,1fr); }
+    .col-2   { grid-template-columns:repeat(2,1fr); }
+    .col-1-2 { grid-template-columns:2fr 1fr 1fr; }
+    .col-2-1 { grid-template-columns:1fr 1fr 2fr; }
+
+    /* ── ARTICLE CARDS ── */
+    .article { padding:16px; cursor:pointer; transition:background .2s; position:relative; border-right:1px solid rgba(42,31,14,.2); }
+    .article:last-child { border-right:none; }
+    .article:hover { background:var(--glass-bg); backdrop-filter:blur(6px); }
+    .article::after { content:'READ MORE →'; position:absolute; bottom:10px; right:14px; font-size:.58rem; letter-spacing:.12em; color:var(--red); opacity:0; transition:opacity .2s; font-weight:700; font-family:var(--f-body); }
+    .article:hover::after { opacity:1; }
+
+    .article-featured { padding:20px 24px; border-bottom:3px double var(--rule); cursor:pointer; transition:background .2s; position:relative; }
+    .article-featured:hover { background:var(--glass-bg); }
+    .article-featured::after { content:'READ FULL STORY →'; position:absolute; bottom:12px; right:24px; font-size:.6rem; letter-spacing:.14em; color:var(--red); opacity:0; transition:opacity .2s; font-weight:700; font-family:var(--f-body); }
+    .article-featured:hover::after { opacity:1; }
+
+    .article-tag      { font-size:.58rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--red); margin-bottom:5px; }
+    .article-headline { font-family:var(--f-head); font-size:1.18rem; font-weight:700; line-height:1.2; color:var(--ink); margin-bottom:6px; }
+    .article-headline.xl { font-size:2rem; line-height:1.1; }
+    .article-headline.lg { font-size:1.5rem; }
+    .article-deck   { font-family:var(--f-disp); font-style:italic; font-size:.85rem; color:var(--ink-mid); margin-bottom:8px; line-height:1.4; }
+    .article-byline { font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:8px; border-bottom:1px solid rgba(42,31,14,.2); padding-bottom:6px; }
+    .article-body   { font-size:.78rem; line-height:1.7; color:var(--ink-mid); }
+
+    .article-img { width:100%; aspect-ratio:4/3; background:var(--paper-dark); border:1px solid rgba(42,31,14,.2); margin-bottom:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .article-img img { width:100%; height:100%; object-fit:cover; filter:sepia(30%) contrast(1.05); display:block; }
+    .img-ph { font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-faint); font-family:var(--f-body); }
+    .article-caption { font-size:.6rem; font-style:italic; color:var(--ink-faint); border-top:1px solid rgba(42,31,14,.2); padding-top:4px; margin-bottom:8px; }
+
+    /* ── AD & FOOTER ── */
+    .ad-block { border:2px solid var(--rule); padding:14px; margin:14px 24px; text-align:center; background:linear-gradient(135deg,#ede0c0,#f5efe0); }
+    .ad-block::before { content:'— ADVERTISEMENT —'; display:block; font-size:.55rem; letter-spacing:.22em; color:var(--ink-faint); margin-bottom:8px; }
+    .ad-label { font-family:var(--f-head); font-size:1.1rem; font-weight:900; color:var(--ink); }
+    .ad-text  { font-size:.7rem; color:var(--ink-mid); margin-top:4px; font-style:italic; }
+    .newspaper-footer { border-top:3px double var(--rule); margin:24px 24px 0; padding-top:10px; display:flex; justify-content:space-between; font-size:.62rem; color:var(--ink-faint); letter-spacing:.05em; }
+
+    /* ── ARCHIVE BAR ── */
+    .archive-bar { max-width:960px; margin:28px auto 0; background:rgba(20,14,6,.75); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.1); border-radius:3px; padding:20px 28px 22px; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+    .archive-bar-title { font-family:var(--f-head); font-size:.68rem; font-weight:700; letter-spacing:.22em; text-transform:uppercase; color:rgba(245,239,224,.5); margin-bottom:14px; display:flex; align-items:center; gap:10px; }
+    .archive-bar-title::before,.archive-bar-title::after { content:''; flex:1; height:1px; background:rgba(245,239,224,.18); }
+    .archive-days { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+    .day-btn { background:rgba(245,239,224,.07); border:1px solid rgba(245,239,224,.18); color:rgba(245,239,224,.75); font-family:var(--f-body); font-size:.68rem; letter-spacing:.06em; cursor:pointer; padding:8px 16px; border-radius:2px; transition:all .2s; display:flex; flex-direction:column; align-items:center; gap:2px; min-width:82px; }
+    .day-btn .day-name { font-weight:700; font-size:.75rem; text-transform:uppercase; letter-spacing:.12em; }
+    .day-btn .day-date { font-size:.6rem; color:rgba(245,239,224,.42); }
+    .day-btn:hover { background:rgba(245,239,224,.17); border-color:rgba(245,239,224,.45); color:var(--paper); transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.4); }
+    .day-btn.today { background:var(--red); border-color:var(--red); color:var(--paper); }
+    .day-btn.today .day-date { color:rgba(245,239,224,.7); }
+
+    /* ── BACK BAR ── */
+    .back-bar { max-width:960px; margin:0 auto 12px; display:flex; align-items:center; gap:14px; }
+    .back-btn { background:rgba(245,239,224,.12); border:1px solid rgba(245,239,224,.25); color:rgba(245,239,224,.85); font-family:var(--f-body); font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; padding:7px 16px; border-radius:2px; transition:all .18s; }
+    .back-btn:hover { background:rgba(245,239,224,.22); color:var(--paper); }
+    .back-bar-label { font-family:var(--f-disp); font-style:italic; font-size:.8rem; color:rgba(245,239,224,.45); }
+
+    /* ── FULL ARTICLE PAGE ── */
+    .article-page { max-width:800px; margin:0 auto; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E"), linear-gradient(180deg,#f7f0e0,#ede0c0); background-color:var(--paper); box-shadow:0 4px 30px rgba(0,0,0,.5), 0 0 0 1px rgba(200,180,140,.5); border-radius:2px; overflow:hidden; }
+    .ap-accent { height:5px; background:linear-gradient(90deg,var(--red),#c0392b,var(--red)); }
+    .ap-inner  { padding:44px 52px 60px; }
+    .ap-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; border-bottom:1px solid rgba(42,31,14,.18); padding-bottom:14px; }
+    .ap-nav .ap-back { font-size:.62rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--red); cursor:pointer; background:none; border:none; font-family:var(--f-body); transition:opacity .15s; }
+    .ap-nav .ap-back:hover { opacity:.65; }
+    .ap-nav .ap-paper { font-family:var(--f-head); font-size:.85rem; font-weight:900; color:var(--ink-faint); }
+    .ap-tag      { font-size:.62rem; font-weight:700; letter-spacing:.2em; text-transform:uppercase; color:var(--red); margin-bottom:10px; }
+    .ap-headline { font-family:var(--f-head); font-size:clamp(1.9rem,4vw,3rem); font-weight:900; line-height:1.08; color:var(--ink); margin-bottom:12px; }
+    .ap-deck     { font-family:var(--f-disp); font-style:italic; font-size:1.08rem; color:var(--ink-mid); border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); padding:10px 0; margin-bottom:16px; }
+    .ap-byline   { font-size:.65rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:24px; }
+    .ap-image    { width:100%; max-height:360px; object-fit:cover; filter:sepia(25%) contrast(1.05); margin-bottom:8px; border:1px solid rgba(42,31,14,.2); display:block; }
+    .ap-img-wrap { margin-bottom:22px; }
+    .ap-img-ph   { width:100%; aspect-ratio:16/9; background:var(--paper-dark); border:1px solid rgba(42,31,14,.18); display:flex; align-items:center; justify-content:center; }
+    .ap-img-ph span { font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-faint); }
+    .ap-caption  { font-size:.63rem; font-style:italic; color:var(--ink-faint); padding-top:5px; border-bottom:1px solid rgba(42,31,14,.12); padding-bottom:8px; }
+    .ap-body { font-size:.88rem; line-height:1.9; color:var(--ink-mid); column-count:2; column-gap:32px; column-rule:1px solid rgba(42,31,14,.18); }
+    .ap-body p { margin-bottom:14px; }
+    .ap-body p:first-child::first-letter { font-family:var(--f-head); font-size:3.8rem; font-weight:900; float:left; line-height:.82; margin:6px 6px 0 0; color:var(--ink); }
+    .ap-pullquote { column-span:all; border-top:2px solid var(--rule); border-bottom:2px solid var(--rule); padding:14px 8px; margin:18px 0; font-family:var(--f-head); font-style:italic; font-size:1.22rem; line-height:1.4; color:var(--ink); text-align:center; }
+    .ap-bottom-nav { max-width:800px; margin:16px auto 0; display:flex; gap:12px; align-items:center; }
+
+    @media(max-width:640px){
+      .col-3,.col-2,.col-1-2,.col-2-1 { grid-template-columns:1fr; }
+      .article { border-right:none; border-bottom:1px solid rgba(42,31,14,.2); }
+      .ap-inner { padding:24px 18px 40px; }
+      .ap-body  { column-count:1; }
+      .day-btn  { min-width:68px; padding:7px 10px; }
+      .newspaper-footer { flex-direction:column; gap:4px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ VIEW 1 — FRONT PAGE ═══════════════ -->
+<div class="view active" id="view-front">
+<div class="newspaper">
+
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <div class="newspaper-name">
+      <span class="mast-icon">⚜</span> The Scaler Chronicles <span class="mast-icon">⚜</span>
+    </div>
+    <div class="tagline">"Bringing A Modern Touch To Tradional Newspaper — Est. 2026"</div>
+    <div class="meta-bar">
+      <span>Tuesday, March 10, 2026</span>
+      <span style="font-style:italic">Vol. I · No. 1</span>
+      <span>$0</span>
+    </div>
+  </header>
+
+  <!-- ══ LEAD STORY ══ -->
+  <article class="article-featured" onclick="openArticle('lead')">
+    <div class="article-tag">Breaking News</div>
+    <h1 class="article-headline xl" style="max-width:620px">
+      STRAIT OF FEAR: US DESTROYS IRANIAN MINE-LAYERS AS GULF WAR ESCALATES
+    </h1>
+    <p class="article-deck">
+      Global energy prices spike as Tehran threatens a total blockade of the Strait of Hormuz; death tolls in Iran and Lebanon climb following massive joint airstrikes.
+    </p>
+    <div class="article-byline">By Farnaz Fassihi and Eric Schmitt</div>
+    <p class="article-body">
+      CENTCOM confirmed that on March 10, U.S. forces "eliminated" 16 Iranian minelayers. They even released declassified aerial footage showing the strikes.…
+    </p>
+  </article>
+
+  <div class="section-label"><span>Top Stories</span></div>
+
+  <!-- ══ TOP STORIES — 3-COL ══ -->
+  <div class="columns col-3">
+    <article class="article" onclick="openArticle('a1')">
+      <div class="article-tag">Politics</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">How Donald Trump's latest Iran war update fits into the US administration's shifting statements</h2>
+      <div class="article-byline">By Carson Ho </div>
+      <p class="article-body">US President Donald Trump has said the war in Iran could be over "very soon", but has still not offered a definitive end date for the conflict…</p>
+    </article>
+    <article class="article" onclick="openArticle('a2')">
+      <div class="article-tag">Science</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Engineers Create Unusual Magnetic Material That Behaves Like Graphene</h2>
+      <div class="article-byline">By University of Illinois Grainger</div>
+      <p class="article-body">A team revealed an unknown Bronze Age settlement using ground-penetrating radar, rewriting the map of early civilisation across the eastern region…</p>
+    </article>
+    <article class="article" onclick="openArticle('a3')">
+      <div class="article-tag">Economy</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">UK, Germany and Italy ‘working together’ to navigate commercial shipping through strait of Hormuz - as it happened</h2>
+      <div class="article-byline">By The Guardian</div>
+      <p class="article-body">Stocks surged to a three-month high after the chairman's remarks suggested borrowing costs could fall as early as spring, lifting all major indices…</p>
+    </article>
+  </div>
+
+  <hr class="h-rule-bold">
+  <div class="section-label"><span>World &amp; Culture</span></div>
+
+  <!-- ══ WORLD & CULTURE — 1-BIG + 2-SMALL ══ -->
+  <div class="columns col-1-2">
+    <article class="article" onclick="openArticle('b1')" style="border-right:1px solid rgba(42,31,14,.25)">
+      <div class="article-tag">Feature</div>
+      <div class="article-img" style="aspect-ratio:16/9"><span class="img-ph">[ Insert Wide Image ]</span></div>
+      <div class="article-caption">Caption here. Credit: Photographer</div>
+      <h2 class="article-headline xl">SILICON EXODUS: TRUMP ORDERS IMMEDIATE PURGE OF ANTHROPIC AI</h2>
+      <p class="article-deck">White House cites "operational trigger" risks as federal agencies are told to strip 'Claude' from government systems; Anthropic shares crater in private markets.</p>
+      <div class="article-byline">By Maria Curi · Washington D.C.</div>
+      <p class="article-body" style="column-count:2;column-gap:14px;column-rule:1px solid rgba(42,31,14,.18)">
+        The Trump administration is preparing an unprecedented executive order to forcibly remove all Anthropic-developed artificial intelligence from federal government operations, citing what intelligence officials call an "imminent national security risk.".
+      </p>
+    </article>
+    <div style="display:flex;flex-direction:column">
+      <article class="article" onclick="openArticle('b2')" style="flex:1;border-bottom:1px solid rgba(42,31,14,.2)">
+        <div class="article-tag">Travel</div>
+        <h2 class="article-headline">AIRSPACE SHUTDOWN: CARRIERS SCRAMBLE AS GULF HUBS GO DARK</h2>
+        <div class="article-byline">By The BBC</div>
+        <p class="article-body">Etihad and Air India launch emergency "Non-Scheduled" flights; US issues "Depart Now" orders for 16 nations as the regional war grounds thousands…</p>
+      </article>
+      <article class="article" onclick="openArticle('b3')" style="flex:1">
+        <div class="article-tag">Technology</div>
+        <h2 class="article-headline">STARGATE COLLAPSES: OPENAI AND ORACLE SCRAP TEXAS MEGA-CENTER</h2>
+        <div class="article-byline">By Silicon Valley Bureau Chief </div>
+        <p class="article-body">Flagship expansion of the $100B AI project in Abilene is officially dead as Meta moves in to lease the remaining capacity…</p>
+      </article>
+    </div>
+  </div>
+
+  <hr class="h-rule">
+  <div class="ad-block">
+    <div class="ad-label">✦ Your Advertisement Here ✦</div>
+    <div class="ad-text">Insert sponsor message — or delete this block</div>
+  </div>
+  <hr class="h-rule">
+
+  <div class="section-label"><span>Opinion &amp; Analysis</span></div>
+
+  <!-- ══ OPINION — 2-COL ══ -->
+  <div class="columns col-2">
+    <article class="article" onclick="openArticle('c1')">
+      <div class="article-tag">Opinion</div>
+      <h2 class="article-headline lg">The Case for the Human Grid</h2>
+      <p class="article-deck">Beyond roads and rails, social infrastructure is crumbling.</p>
+      <div class="article-byline">Editorial Board</div>
+      <p class="article-body">While we argue over bridge repairs and fiber optics, the invisible networks—childcare, community centers, and local libraries—are reaching a breaking point…</p>
+    </article>
+    <article class="article" onclick="openArticle('c2')">
+      <div class="article-tag">Analysis</div>
+      <h2 class="article-headline lg">The Widening Education Gap: A New Map of the Polls</h2>
+      <p class="article-deck">The diploma is becoming the most powerful predictor of political identity.</p>
+      <div class="article-byline">By Data Desk</div>
+      <p class="article-body">Analysis of the latest precinct data shows that the urban-rural divide is being superseded by a educational sorting process that is fundamentally redrawing the electoral map…</p>
+    </article>
+  </div>
+
+  <hr class="h-rule-bold">
+  <div class="section-label"><span>Sport &amp; Health</span></div>
+
+  <!-- ══ SPORT & HEALTH — 3-COL ══ -->
+  <div class="columns col-3">
+    <article class="article" onclick="openArticle('d1')">
+      <div class="article-tag">Sport</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Jacob Kiplimo Reclaims Half-Marathon World Record in Lisbon</h2>
+      <div class="article-byline">By The Guardian </div>
+      <p class="article-body">On March 8, 2026, Jacob Kiplimo ran a 57:20 at the Lisbon Half Marathon. This officially broke the previous world record of 57:30 (held by Yomif Kejelcha)…</p>
+    </article>
+    <article class="article" onclick="openArticle('d2')">
+      <div class="article-tag">Health</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">CRISPR-Based 'Casgevy' Expands Access as Cure for Sickle Cell Disease</h2>
+      <div class="article-byline">By FDA / Innovative Genomics Institute</div>
+      <p class="article-body">The FDA-approved therapy Casgevy (the first CRISPR treatment) is now being rolled out globally. Recent 2026 data confirms it effectively "cures" sickle cell by editing the patient's own stem cells…</p>
+    </article>
+    <article class="article" onclick="openArticle('d3')">
+      <div class="article-tag">Sport</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Learner Tien Stuns as Youngest Quarterfinalist in Melbourne Since 2015</h2>
+      <div class="article-byline">By ATP Tour</div>
+      <p class="article-body">In the 2026 Australian Open (completed February 2026), 19-year-old Learner Tien became a breakout sensation, reaching the quarterfinals. Additionally, Carlos Alcaraz (22) defeated Novak Djokovic in the final…</p>
+    </article>
+  </div>
+
+  <hr class="h-rule-bold">
+  <div class="section-label"><span>Science &amp; Environment</span></div>
+
+  <!-- ══ SCIENCE — WIDE LEFT + 2-SMALL RIGHT ══ -->
+  <div class="columns col-1-2">
+    <article class="article" onclick="openArticle('e1')" style="border-right:1px solid rgba(42,31,14,.25)">
+      <div class="article-tag">Environment</div>
+      <div class="article-img" style="aspect-ratio:16/9"><span class="img-ph">[ Insert Wide Image ]</span></div>
+      <div class="article-caption">Caption. Credit: Photographer / Agency</div>
+      <h2 class="article-headline xl">Unprecedented Marine Heatwave Grips the Northern Coral Sea</h2>
+      <p class="article-deck">A landmark report warns that marine ecosystems face collapse within a generation unless emissions are cut sharply</p>
+      <div class="article-byline">By Environment Correspondent · Pacific Bureau</div>
+      <p class="article-body" style="column-count:2;column-gap:14px;column-rule:1px solid rgba(42,31,14,.18)">
+        Thermal stress across the Far Northern Great Barrier Reef has reached critical levels this week, with satellite data confirming sea surface temperatures are averaging 1.5°C to 2.0°C above the seasonal norm.
+      </p>
+    </article>
+    <div style="display:flex;flex-direction:column">
+      <article class="article" onclick="openArticle('e2')" style="flex:1;border-bottom:1px solid rgba(42,31,14,.2)">
+        <div class="article-tag">Space</div>
+        <h2 class="article-headline">The "Moon Hopper" Prepares for Launch</h2>
+        <div class="article-byline">By China National Space Administration</div>
+        <p class="article-body">As of March 2026, final checks are underway for the mid-year launch of Chang'e 7. The mission’s standout feature—a "flying hopper"—is designed to navigate the Moon…</p>
+      </article>
+      <article class="article" onclick="openArticle('e3')" style="flex:1">
+        <div class="article-tag">Biology</div>
+        <h2 class="article-headline">The Cellular Atlas of Aging</h2>
+        <div class="article-byline">By LIFE SCIENCES DESK</div>
+        <p class="article-body">Scientists map 7 million cells across 21 organs to reveal how the body truly ages.Researchers completed a massive cellular atlas detailing how aging reshapes the human body. By analyzing nearly 7 million individual cells…</p>
+      </article>
+    </div>
+  </div>
+
+  <hr class="h-rule-bold">
+  <div class="section-label"><span>Business &amp; Finance</span></div>
+
+  <!-- ══ BUSINESS — 3-COL ══ -->
+  <div class="columns col-3">
+    <article class="article" onclick="openArticle('f1')">
+      <div class="article-tag">Business</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Hapag-Lloyd Shakes Market with $4bn ZIM Acquisition</h2>
+      <div class="article-byline">By Alphaliner / Lloyd’s List</div>
+      <p class="article-body">In the largest maritime deal of the decade, Germany-based Hapag-Lloyd announced on March 10, 2026, a $4 billion acquisition of the Israeli ocean carrier ZIM…</p>
+    </article>
+    <article class="article" onclick="openArticle('f2')">
+      <div class="article-tag">Finance</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Brussels Sets "March Deadline" for Stablecoin Compliance</h2>
+      <div class="article-byline">By The Brussels Times</div>
+      <p class="article-body">The European Banking Authority (EBA) confirmed on March 12, 2026, that the nine-month transitional period for electronic money tokens (stablecoins) has officially concluded…</p>
+    </article>
+    <article class="article" onclick="openArticle('f3')">
+      <div class="article-tag">Retail</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">The "Wet Weather" Slump: UK High Street Footfall Drops 4.7%</h2>
+      <div class="article-byline">By British Retail Consortium</div>
+      <p class="article-body">Official data released on March 11, 2026, shows a sharp decline in physical retail visits across the UK. Despite an 8-week growth streak in homeware sales, overall footfall plummeted…</p>
+    </article>
+  </div>
+
+  <hr class="h-rule-bold">
+  <div class="section-label"><span>Arts &amp; Society</span></div>
+
+  <!-- ══ ARTS — 2-COL ══ -->
+  <div class="columns col-2">
+    <article class="article" onclick="openArticle('g1')">
+      <div class="article-tag">Arts</div>
+      <div class="article-img" style="aspect-ratio:3/2"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">The Lost Modernist: Hilma af Klint’s Final Unveiling</h2>
+      <p class="article-deck">A definitive retrospective in Paris recovers the 'secret' canvases of the abstract pioneer.</p>
+      <div class="article-byline">By Arts Correspondent · Paris</div>
+      <p class="article-body">Opening this week at the Centre Pompidou, the exhibition "Hidden in Plain Sight" brings together over 140 works that were famously kept out of the public eye for decades…</p>
+    </article>
+    <article class="article" onclick="openArticle('g2')">
+      <div class="article-tag">Society</div>
+      <div class="article-img" style="aspect-ratio:3/2"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">The 100-80-100 Experiment: Two Years Later</h2>
+      <p class="article-deck">While 60% of firms made the four-day week permanent, others face a 'Friday fatigue' crisis.</p>
+      <div class="article-byline">By Society Desk </div>
+      <p class="article-body">Two years after the largest pilot of the four-day work week concluded in Ireland and the UK, the final socio-economic report shows a sharp divide…</p>
+    </article>
+  </div>
+
+  <hr class="h-rule">
+  <div class="ad-block">
+    <div class="ad-label">✦ Second Advertisement Block ✦</div>
+    <div class="ad-text">Insert a second sponsor, event announcement, or subscription call-to-action here</div>
+  </div>
+  <hr class="h-rule">
+
+  <div class="section-label"><span>Technology &amp; Media & Telecom</span></div>
+
+  <!-- ══ TECH — 2-BIG-RIGHT ══ -->
+  <div class="columns col-2-1">
+    <article class="article" onclick="openArticle('h1')">
+      <div class="article-tag">Technology</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Oracle beats quarterly revenue estimates on AI-driven demand, shares rise</h2>
+      <div class="article-byline">By Reuters</div>
+      <p class="article-body">March 10 (Reuters) - Oracle (ORCL.N), opens new tab beat Wall Street estimates for third-quarter revenue on Tuesday, as robust demand for ​its cloud computing services, driven by the artificial intelligence ‌boom…</p>
+    </article>
+    <article class="article" onclick="openArticle('h2')">
+      <div class="article-tag">Innovation</div>
+      <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+      <div class="article-caption">Caption. Source: Name</div>
+      <h2 class="article-headline lg">Solid-State Battery Breakthrough Promises EV Range of 900km</h2>
+      <div class="article-byline">By Science Desk · Tokyo</div>
+      <p class="article-body">Engineers at the laboratory claim their prototype retains 92 percent capacity after a thousand charge cycles — a figure that would make long-range electric travel commercially viable at scale…</p>
+    </article>
+    <article class="article" onclick="openArticle('h3')" style="border-right:none">
+      <div class="article-tag">Future</div>
+      <h2 class="article-headline xl">The City That Runs Entirely on Rainwater</h2>
+      <p class="article-deck">A Singaporean district shows the world what radical water independence looks like.</p>
+      <div class="article-byline">By Infrastructure Desk · Singapore</div>
+      <p class="article-body">Every drop that falls on the district's rooftops is captured, filtered, and recirculated through a network of canals and underground reservoirs. Residents haven't paid a water bill in three years…</p>
+    </article>
+  </div>
+
+  <footer class="newspaper-footer">
+    <span>© 2026 The Scaler Chronicles.</span>
+    <span>Edited by Shenz Nazeer · First edition</span>
+    <span>Subscribe · Archives · Contact</span>
+  </footer>
+</div><!-- /newspaper -->
+
+<!-- ARCHIVE DATE PICKER -->
+<div class="archive-bar">
+  <div class="archive-bar-title">Previous Editions</div>
+  <div class="archive-days">
+    <button class="day-btn today" data-key="mar10" onclick="loadEdition(this)"><span class="day-name">Tue</span><span class="day-date">Mar 10</span></button>
+    <button class="day-btn"       data-key="mar09" onclick="loadEdition(this)"><span class="day-name">Mon</span><span class="day-date">Mar 9</span></button>
+    <button class="day-btn"       data-key="mar08" onclick="loadEdition(this)"><span class="day-name">Sun</span><span class="day-date">Mar 8</span></button>
+    <button class="day-btn"       data-key="mar07" onclick="loadEdition(this)"><span class="day-name">Sat</span><span class="day-date">Mar 7</span></button>
+    <button class="day-btn"       data-key="mar06" onclick="loadEdition(this)"><span class="day-name">Fri</span><span class="day-date">Mar 6</span></button>
+    <button class="day-btn"       data-key="mar05" onclick="loadEdition(this)"><span class="day-name">Thu</span><span class="day-date">Mar 5</span></button>
+    <button class="day-btn"       data-key="mar04" onclick="loadEdition(this)"><span class="day-name">Wed</span><span class="day-date">Mar 4</span></button>
+  </div>
+</div>
+</div><!-- /view-front -->
+
+
+<!-- ═══════════════ VIEW 2 — ARCHIVE ═══════════════ -->
+<div class="view" id="view-archive">
+  <div class="back-bar">
+    <button class="back-btn" onclick="showView('front')">← Back to Today</button>
+    <span class="back-bar-label" id="archive-label">Archive Edition</span>
+  </div>
+  <div id="archive-content"></div>
+  <div class="archive-bar" style="margin-top:28px">
+    <div class="archive-bar-title">Switch Edition</div>
+    <div class="archive-days">
+      <button class="day-btn today" data-key="mar10" onclick="loadEdition(this)"><span class="day-name">Tue</span><span class="day-date">Mar 10</span></button>
+      <button class="day-btn"       data-key="mar09" onclick="loadEdition(this)"><span class="day-name">Mon</span><span class="day-date">Mar 9</span></button>
+      <button class="day-btn"       data-key="mar08" onclick="loadEdition(this)"><span class="day-name">Sun</span><span class="day-date">Mar 8</span></button>
+      <button class="day-btn"       data-key="mar07" onclick="loadEdition(this)"><span class="day-name">Sat</span><span class="day-date">Mar 7</span></button>
+      <button class="day-btn"       data-key="mar06" onclick="loadEdition(this)"><span class="day-name">Fri</span><span class="day-date">Mar 6</span></button>
+      <button class="day-btn"       data-key="mar05" onclick="loadEdition(this)"><span class="day-name">Thu</span><span class="day-date">Mar 5</span></button>
+      <button class="day-btn"       data-key="mar04" onclick="loadEdition(this)"><span class="day-name">Wed</span><span class="day-date">Mar 4</span></button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════ VIEW 3 — FULL ARTICLE ═══════════════ -->
+<div class="view" id="view-article">
+  <div class="article-page">
+    <div class="ap-accent"></div>
+    <div class="ap-inner">
+      <div class="ap-nav">
+        <button class="ap-back" onclick="goBack()">← Back to Edition</button>
+        <span class="ap-paper">The Scaler Chronicles</span>
+      </div>
+      <div  id="ap-tag"></div>
+      <h1   id="ap-headline"></h1>
+      <p    id="ap-deck"></p>
+      <div  id="ap-byline"></div>
+      <div  id="ap-img-wrap"></div>
+      <div  id="ap-body"></div>
+    </div>
+  </div>
+  <div class="ap-bottom-nav">
+    <button class="back-btn" onclick="goBack()">← Return to Edition</button>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     ALL ARTICLE CONTENT — Edit this section to change text
+     Each body[] entry is a paragraph. Use { pullquote: "..." }
+     for a full-width pull-quote between columns.
+═══════════════════════════════════════════════════════════ -->
+<script>
+const ARTICLES = {
+
+  /* ══════════════════════════════════
+     TODAY — TUESDAY MARCH 10
+  ══════════════════════════════════ */
+
+  lead: {
+    tag:"Breaking News",
+    headline:"STRAIT OF FEAR: US DESTROYS IRANIAN MINE-LAYERS AS GULF WAR ESCALATES ",
+    deck:"Global energy prices spike as Tehran threatens a total blockade of the Strait of Hormuz; death tolls in Iran and Lebanon climb following massive joint airstrikes. ",
+    byline:"By Farnaz Fassihi and Eric Schmitt · March 10, 2026",
+    imgSrc:"tehran.webp", imgAlt:"Summit delegates", caption:"Caption: Images of Tehran.",
+    body:[
+      "GENEVA — The summit opened yesterday under extraordinary security as world leaders arrived bearing competing visions for what could become the most far-reaching accord since the Paris Agreement. Motorcades swept through cleared boulevards while thousands of delegates, lobbyists, and correspondents converged on the Palais des Nations.",
+      "Observers were cautiously optimistic, pointing to overnight progress in working-group sessions that broke a months-long deadlock over the contentious question of carbon credit accounting. A revised text, circulated in the early hours, drew tentative approval from delegations representing the world's five largest economies.",
+      { pullquote: '"We are closer than we have ever been," said the Secretary-General. "But closer is not there."' },
+      "The sticking points remain significant. Developing nations have demanded larger financial commitments from industrialised countries, while several wealthy governments face domestic political pressure to limit their exposure. The gulf between positions narrowed overnight but has not closed.",
+      "On the sidelines, civil society groups staged vigils and press briefings, urging delegates not to repeat the pattern of summits that end in pledges without enforcement mechanisms. 'Words on paper change nothing,' said the head of one major coalition. 'We need binding targets with teeth.'",
+      "The next plenary session is scheduled for this evening, when the revised text will be tabled for formal discussion. Whether the language survives contact with the full assembly remains to be seen. Diplomats who have attended similar gatherings say that the final twelve hours are always the most unpredictable — and the most revealing."
+    ]
+  },
+
+  a1: {
+    tag:"Politics",
+    headline:"How Donald Trump's latest Iran war update fits into the US administration's shifting statements",
+    deck:"Donald Trump says the war in Iran is very complete, while US Defense Secretary Pete Hegseth says it's just the beginning. ",
+    byline:"By Carson Ho · March 10, 2026",
+    imgSrc:"trump.avif", imgAlt:"Parliament", caption:"Caption here. Credit: Name / Agency",
+    body:[
+      "US President Donald Trump has said the war in Iran could be over very soon, but has still not offered a definitive end date for the conflict.He threatened to hit Iran 20 times harder and make it virtually impossible for Iran to ever be built back if it further disrupted the world's oil supply.",
+      "Mr Trump has also described the appointment of Iran's new supreme leader, Mojtaba Khamenei — son of slain leader Ali Khamenei — as disappointing.Mr Trump gave his latest assessments of the war in Iran at a press conference in Florida after addressing House Republicans at an annual policy retreat, and in posts on social media, on Monday evening, US local time.",
+      
+      "Ten days into America's so-called Operation Epic Fury, messaging from the Trump administration continues to shift.",
+      "'Laser-focused' objectives and the regime change question",
+      "Soon after US and Israeli missiles first hit Iran on February 28, Mr Trump took to his social media platform Truth Social in a white baseball cap with USA emblazoned on the front.Mr Trump urged Iranians to seize control of their destiny and overthrow the country's clerical rule."
+    ]
+  },
+
+  a2: {
+    tag:"Science",
+    headline:"Engineers Create Unusual Magnetic Material That Behaves Like Graphene",
+    deck:"Researchers at the University of Illinois have discovered a surprising mathematical connection between two areas of condensed-matter physics that were long considered separate.",
+    byline:"By University of Illinois Grainger College of Engineering · March 10, 2026",
+    imgSrc:"magnetic.webp", imgAlt:"Archaeological site", caption:"Caption: The scan reveals streets, plazas, and what appear to be granary structures. Credit: Name",
+    body:[
+      "The electronic and magnetic behavior of two-dimensional materials both hold significant promise for future technologies. For many years, scientists treated these two properties as unrelated. Engineers at the University of Illinois Grainger College of Engineering have now shown that they can be described using the same mathematical framework.",
+      "In a study published in Physical Review X, researchers at the University of Illinois Urbana-Champaign demonstrated how carefully designed two-dimensional magnetic systems can follow the same equations that govern mobile electrons in graphene.This connection could influence the development of radiofrequency technologies and offer scientists a new strategy for analyzing and designing these types of materials.",
+      { pullquote: '“It’s not at all obvious that there is an analogy between 2D electronics and 2D magnetic behaviors, and we’re still amazed at how well this analogy works,” — Bobby Kaman' },
+      "The concept originated while Kaman, a materials science and engineering graduate student in the research group of professor Axel Hoffmann, was studying metamaterials. These materials are designed with carefully arranged internal structures that produce behaviors not possible in the original substance’s atomic-scale form.",
+      "Electrons moving through graphene and tiny magnetic disturbances in so-called magnonic materials can both behave like waves. This similarity led Kaman to wonder whether a magnonic material could be engineered to mimic the electronic behavior seen in graphene.",
+      "“Graphene is unique because its conduction electrons organize into massless waves, so I was curious if altering the physical geometry of a magnonic material to look like graphene would make it act like graphene,” Kaman said. “I thought it would maybe have a handful of similar properties to graphene, but the analogy was much deeper and richer than I expected.”"
+    ]
+  },
+
+  a3: {
+    tag:"Economy",
+    headline:"UK, Germany and Italy ‘working together’ to navigate commercial shipping through strait of Hormuz - as it happened",
+    deck:"Keir Starmer has agreed with Germany’s Friedrich Merz and Italy’s Giorgia Meloni to “work closely together”",
+    byline:"By The Guardian · March 10, 2026",
+    imgSrc:"Ships.avif", imgAlt:"Stock exchange floor", caption:"Caption here. Credit: Name",
+    body:[
+      "A spokesperson for Starmer said the prime minister spoke to the leaders of Germany and Italy on Monday night “about the situation in the Middle East, discussing the strait of Hormuz.”",
+      "The key phrase came during an otherwise routine address to the regional bankers' association: rates are 'sufficiently restrictive' and the committee would 'not hesitate to act if the data supports it.' Traders read those words as an unmistakable signal, and the main index closed up 2.3 percent.",
+      { pullquote: '"The market is pricing in two cuts before the summer. Whether the data delivers them is another matter." — Chief Economist, Major Investment Bank' },
+      "Bond markets moved sharply, with the yield on the two-year note dropping fourteen basis points in afternoon trading — its largest single-session fall this year. The move was amplified by thin liquidity, with many participants still positioned for rates to hold through mid-year.",
+      "Economists cautioned that one ambiguous speech does not a policy pivot make. Inflation, while declining, remains above target, and several committee members who spoke separately this week struck a noticeably more hawkish tone.",
+      "✏️ Replace this paragraph with your own additional analysis or sourced quotes."
+    ]
+  },
+
+  b1: {
+    tag:"Feature",
+    headline:"SILICON EXODUS: TRUMP ORDERS IMMEDIATE PURGE OF ANTHROPIC AI",
+    deck:"White House cites operational trigger risks as federal agencies are told to strip 'Claude' from government systems; Anthropic shares crater in private markets.",
+    byline:"By Maria Curi · Washington D.C. · March 10, 2026",
+    imgSrc:"claude.webp", imgAlt:"Bookshop interior", caption:"The Bloomsbury shop has occupied this address since 1923. Credit: Photographer",
+    body:[
+      "The Trump administration is preparing an unprecedented executive order to forcibly remove all Anthropic-developed artificial intelligence from federal government operations, citing what intelligence officials call an imminent national security risk.",
+      "The move, first reported by Axios, comes after U.S. intelligence agencies intercepted encrypted communications believed to be operational triggers intended for sleeper assets. While officials have not explicitly linked Anthropic’s Claude models to these triggers, the administration is taking a zero-trust approach to any AI infrastructure with significant international data ties.",
+      { pullquote: '"In a time of active conflict, we cannot have black-box algorithms managing our logistics or sensitive communications when their origins and vulnerabilities remain under question." — Senior White House aide' },
+      "The fallout in Silicon Valley was instantaneous. Anthropic, once the safety-first darling of the AI world, saw its valuation plummet in secondary markets as federal contractors—including giants like Palantir and Lockheed Martin—began a frantic audit of their own software stacks.",
+      "The order is expected to be signed by the weekend, marking the first time a sitting president has deported a specific line of code from the U.S. government. Critics, however, warn that a sudden purge could cripple federal efficiency in the middle of a two-front war.",
+      "You don't just 'unplug' the brain of a modern agency without expecting a seizure, warned one former CTO at the Department of Energy."
+    ]
+  },
+
+  b2: {
+    tag:"Travel",
+    headline:"AIRSPACE SHUTDOWN: CARRIERS SCRAMBLE AS GULF HUBS GO DARK",
+    deck:"Etihad and Air India launch emergency Non-Scheduled flights; US issues Depart Now orders for 16 nations as the regional war grounds thousands.",
+    byline:"By Travel Desk · Vienna · March 10, 2026",
+    imgSrc:"airspace.webp", imgAlt:"Night train compartment", caption:"",
+    body:[
+      "The traditional East-meets-West flight paths were redrawn overnight as the escalating conflict in the Persian Gulf forced a near-total shutdown of major transit hubs. Etihad Airways and Air India both released emergency schedules on Tuesday, desperately trying to move thousands of passengers stranded by the sudden closure of regional air corridors.",
+      "Under the direction of Secretary of State Marco Rubio, the U.S. State Department elevated its travel advisory to a Level 4: DO NOT TRAVEL for most of the region, including a Depart Now directive for Americans in 16 countries.",
+      "In response, Air India announced 78 additional flights bypassing the Gulf entirely, routing directly from Asia to Europe and North America to avoid the active combat zones.",
+      "The hub-and-spoke model that built Dubai and Doha has hit a wall of fire, noted one aviation analyst. While limited flights are trickling out of Abu Dhabi under strict safety protocols, the Strait of Fear has effectively turned the Middle East into a no-fly zone for commercial leisure travel.",
+    ]
+  },
+
+  b3: {
+    tag:"Technology",
+    headline:"STARGATE COLLAPSES: OPENAI AND ORACLE SCRAP TEXAS MEGA-CENTER",
+    deck:"Flagship expansion of the $100B AI project in Abilene is officially dead as Meta moves in to lease the remaining capacity.",
+    byline:"By Silicon Valley Bureau Chief · March 10, 2026",
+    imgSrc:"oracle.jpg", imgAlt:"Newsroom", caption:"",
+    body:[
+      "The most ambitious AI infrastructure project in American history, codenamed Stargate, has hit a massive wall. OpenAI and Oracle confirmed Tuesday they have officially walked away from plans to expand their flagship data center campus in Abilene, Texas.",
+      "The project, which was initially hailed as proof of U.S. dominance in the AI arms race, was scrapped due to financing challenges and shifting demand forecasts. In a surprising twist, Meta is reportedly in talks to lease the unused 1.2-gigawatt capacity for its own world model training.",
+     
+      "Despite the collapse of the Texas expansion, Oracle reported record Q3 earnings on Tuesday, with a $553 billion backlog in cloud contracts, proving that while individual projects may fail, the hunger for AI compute remains insatiable.",
+      
+    ]
+  },
+
+  c1: {
+    tag:"Opinion",
+    headline:"The Case for the Human Grid",
+    deck:"Beyond roads and rails, social infrastructure is crumbling.",
+    byline:"Editorial Board · March 10, 2026",
+    imgSrc:"humangrid.png", imgAlt:"", caption:"",
+    body:[
+      "It is fashionable to speak of the future in the language of hardware. We debate the throughput of fiber-optic cables, the resilience of power grids, and the structural integrity of our bridges. These are the visible bones of a civilization, and they are, without question, in need of repair. Yet, as we enter 2026, we are discovering that a society can have pristine highways and lightning-fast internet and still suffer from a fundamental collapse.",
+      "The Human Grid is the invisible network of social infrastructure—childcare centers, local libraries, community hubs, and public parks—that allows a population to function as a community rather than a collection of isolated consumers. While a bridge allows a car to cross a river, a community center allows a neighborhood to cross the chasm of social isolation.",
+      
+      "Data from the first quarter of this year suggests that social loneliness has become a greater drag on national productivity than traffic congestion. When childcare systems fail, the labor market tightens. When libraries close, the informational floor of the citizenry drops. We have spent decades optimizing our physical transit while allowing our social transit to atrophy.",
+      "To fix this, we must shift our definition of essential spend. If a high-speed rail line is considered a public good because it moves bodies, then a robust, state-funded childcare system must be considered a public good because it moves lives. We cannot expect a 21st-century economy to run on a 19th-century social foundation.",
+      "The most pressing repair job of 2026 isn't made of steel or concrete; it is made of the people and the places that hold us together. Until we invest in the Human Grid with the same urgency we bring to the power grid, we are simply paving roads to nowhere."
+    ]
+  },
+
+  c2: {
+    tag:"Analysis",
+    headline:"How the Electorate Shifted in Three Charts",
+    deck:"Data reveals a realignment that defies easy labels.",
+    byline:"By Data Desk · March 10, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The numbers behind last season's elections tell a story more nuanced than the shouting on social media. Suburban voters moved left on environment, right on taxation, and stayed stubbornly centrist on almost everything else — a pattern that cut across every party line that pundits had drawn in advance.",
+      "The first chart tells the most important story: the collapse of straight-ticket voting. In districts that were considered safe for a generation, the winning candidate's margin over the party average was larger than the party's own margin over its opponent. Voters, in other words, were choosing people over platforms.",
+      { pullquote: '"The old coalitions have not collapsed. They have dissolved. Something new is forming but we cannot yet name it." — Political Scientist, University of Chicago' },
+      "The second chart maps the education gap — not a new phenomenon, but one that has accelerated dramatically. Among voters with postgraduate degrees, the swing was fourteen points. Among those without a secondary qualification, it moved eight points in the opposite direction. The divergence has not been this wide since polling began.",
+      "The third chart is perhaps the most unsettling for party strategists: youth turnout. At 68 percent, it was the highest recorded in this election series — and nearly a third of those young voters chose a candidate who ran explicitly against both major parties.",
+      "✏️ Replace this paragraph with your own data analysis or additional chart descriptions."
+    ]
+  },
+
+  /* ── Sport & Health ── */
+  d1: {
+    tag:"Sport",
+    headline:"National Team Qualifies After Penalty Shootout Thriller",
+    deck:"A nation holds its breath — then erupts.",
+    byline:"By Sports Desk · Stadium Bureau · March 10, 2026",
+    imgSrc:"jacob.jpg", imgAlt:"Stadium", caption:"Caption here.",
+    body:[
+      "Tens of thousands fell silent in the eighty-ninth minute, then erupted as the decisive kick found the bottom corner of the net. The national team advances to its first final in fourteen years after a match that oscillated between brilliance and agony across one hundred and twenty minutes of extraordinary football.",
+      "The shootout itself lasted seven rounds. Two keepers made crucial saves. One kick hit the crossbar and bounced out. When the final penalty went in, the goalkeeper sprinted the length of the pitch, chased by the entire squad, while the crowd produced a wall of noise that the stadium's commentator later described as 'something I have never experienced in thirty years of sport journalism.'",
+      { pullquote: '"We told each other in the dressing room: whatever happens, we leave everything on this pitch. I think we did that." — Team Captain' },
+      "The opposition had been considered favourites coming into the tie, having won their group with a perfect record and boasting two of the most expensive players in the tournament. Their attacking play in the first half justified that reputation, and the home side were fortunate to reach half-time level.",
+      "The second half told a different story. Two tactical substitutions changed the shape and tempo of the game, and the team found a rhythm that neutralised their opponent's strengths. The goal that took the match to extra time came from an unlikely source — a substitute who had been on the pitch for eleven minutes.",
+      "The final is scheduled for next weekend. Tickets sold out within four minutes of release."
+    ]
+  },
+
+  d2: {
+    tag:"Health",
+    headline:"New Drug Halts Progression of Common Degenerative Condition",
+    deck:"Trial results described as 'remarkable' by independent reviewers.",
+    byline:"By Medical Correspondent · London · March 10, 2026",
+    imgSrc:"stem.jpg", imgAlt:"Laboratory", caption:"Caption here.",
+    body:[
+      "Clinical trials involving more than eight thousand patients have shown a 67 percent reduction in symptom progression among those treated with a newly developed compound, raising hopes for millions who currently have no effective treatment for the condition.",
+      "The drug, developed over nine years by a consortium of university laboratories and a mid-sized pharmaceutical company, works by targeting a specific protein that accumulates in affected tissue. Previous attempts to interfere with this process had either proved toxic at effective doses or failed to penetrate the relevant barriers in the body.",
+      { pullquote: '"We have been trying to crack this mechanism for twenty years. These results are not incremental. They are a step change." — Lead Researcher' },
+      "Independent reviewers who assessed the trial data described the results as remarkable, though they cautioned that the patient population in the study was not fully representative of the broader affected population. A follow-up trial with a more diverse cohort is planned to begin later this year.",
+      "Regulatory submissions have been prepared for three major markets. Approval, if granted, would make the treatment available within eighteen to twenty-four months. Patient advocacy groups have already begun lobbying for expedited review, citing the severity of the condition and the absence of any current alternatives.",
+      "✏️ Replace this paragraph with your own health reporting or additional expert commentary."
+    ]
+  },
+
+  d3: {
+    tag:"Sport",
+    headline:"Record Prize Fund Set for Upcoming Grand Slam",
+    deck:"Historic payout ends years of campaigning by players' associations.",
+    byline:"By Sports Desk · International · March 10, 2026",
+    imgSrc:"tien.webp", imgAlt:"Tennis court", caption:"Caption here.",
+    body:[
+      "Organisers confirmed the largest prize fund in the tournament's 140-year history, a move welcomed by players' associations who have long pushed for equal pay across all rounds and a fairer distribution between top-ranked and lower-ranked competitors.",
+      "The total pot represents a 34 percent increase on last year's figure, and for the first time, the prize for losing in the first round will exceed the minimum wage equivalent of a professional training schedule — a benchmark that campaigners have cited for years as a basic standard of fairness.",
+      { pullquote: '"This is not charity. This is recognition that every player on that draw contributed to a tournament worth watching." — Head of Players\' Association' },
+      "The announcement was not without controversy. Several top-seeded players argued privately that the redistribution flattened incentives and failed to reflect the commercial reality that the tournament's television revenues are almost entirely generated by a handful of marquee matches.",
+      "Tournament directors dismissed these concerns, pointing to data showing that first and second-round attendance has grown faster than later rounds in four of the past six years — evidence, they argue, that the base of the tournament has commercial value of its own.",
+      "✏️ Replace this paragraph with your own reporting from the tournament or player reactions."
+    ]
+  },
+
+  /* ── Science & Environment ── */
+  e1: {
+    tag:"Environment",
+    headline:"The Ocean Is Running Out of Time",
+    deck:"A landmark report warns that marine ecosystems face collapse within a generation unless emissions are cut sharply.",
+    byline:"By Environment Correspondent · Pacific Bureau · March 10, 2026",
+    imgSrc:"corals.jpg", imgAlt:"Ocean", caption:"Caption here. Credit: Photographer / Agency",
+    body:[
+      "The study, compiled by a consortium of 200 marine biologists and oceanographers across eighteen countries, describes a cascade of effects — rising temperatures, acidification, deoxygenation — that are compounding faster than any previous model predicted. Coral reefs, which shelter a quarter of all marine species, are bleaching at twice the rate recorded a decade ago.",
+      "What makes this report different from its predecessors is not its conclusions — scientists have been issuing similar warnings for three decades — but the precision of its timeline. For the first time, the authors identify specific tipping points, predicted within windows of two to five years, beyond which recovery becomes functionally impossible.",
+      { pullquote: '"We are not talking about gradual change anymore. We are talking about thresholds. Once crossed, they do not uncross." — Lead Author, Marine Sciences Institute' },
+      "The political response has been tepid. Three governments whose coastlines are directly implicated in the worst-case scenarios declined to endorse the report's findings, citing the need for 'further review.' Environmental groups called this unconscionable. The report's authors were more measured, saying they remained hopeful that the data would eventually compel action.",
+      "For fishing communities who depend on the affected ecosystems, the timeline is not abstract. In three regions covered by the study, catches have fallen by more than 40 percent in the past decade. Several traditional fisheries have already been abandoned. The communities around them are adapting as best they can, but the pace of change has outrun any reasonable adjustment.",
+      "✏️ Replace this paragraph with your own environmental reporting or additional context from the affected regions."
+    ]
+  },
+
+  e2: {
+    tag:"Space",
+    headline:"Probe Sends Back First Soil Samples From Distant Moon",
+    deck:"Scientists describe results as unlike anything in the known catalogue.",
+    byline:"By Science Desk · Cape Canaveral · March 10, 2026",
+    imgSrc:"", imgAlt:"Space probe", caption:"Caption here.",
+    body:[
+      "Scientists described the samples — transmitted as spectroscopic data rather than physical material — as unlike anything in the known catalogue, suggesting geological processes quite different from those that shaped our own world. The readings point to a subsurface chemistry that has no clear analogue in the solar system's recorded history.",
+      "The probe, which has been in transit for four years, touched down on the moon's northern polar region last month. Its drilling mechanism encountered unexpectedly hard material at a depth of twelve centimetres, requiring the mission team to switch to a contingency sampling protocol they had hoped never to use.",
+      { pullquote: '"The data is real. We have checked it six times. What it means — that will take months to work out." — Mission Scientist' },
+      "The composition of the subsurface layer is rich in compounds that, on Earth, are associated with biological activity. The team is careful to note that this does not imply life, and that abiotic processes can produce similar signatures. But the concentration and distribution of the compounds is, in the words of one team member, 'difficult to explain without invoking some form of chemistry we have not seen before.'",
+      "A second analysis phase is now under way, using a different instrument suite to cross-check the initial readings. Results are expected within three months. Until then, mission scientists say they will resist speculation — while acknowledging that the entire scientific community is holding its breath.",
+      "✏️ Replace this paragraph with your own science reporting or expert commentary."
+    ]
+  },
+
+  e3: {
+    tag:"Biology",
+    headline:"CRISPR Technique Reverses Age-Related Vision Loss in Mice",
+    deck:"A milestone that brings human gene therapy one step closer to clinical reality.",
+    byline:"By Medical Science Desk · March 10, 2026",
+    imgSrc:"", imgAlt:"Laboratory", caption:"Caption here.",
+    body:[
+      "Researchers at the institute successfully restored near-normal vision in elderly mice using a modified CRISPR technique that reprogrammes ageing cells without introducing permanent genetic changes, marking a milestone that brings human gene therapy one step closer to clinical trials.",
+      "The approach differs from earlier gene-editing methods in a crucial respect: it does not alter the underlying DNA sequence but instead resets the chemical markers — the epigenetic tags — that accumulate on genes as cells age, effectively turning back the molecular clock in targeted tissue.",
+      { pullquote: '"We are not editing genes. We are reminding cells what they already know how to do." — Principal Investigator' },
+      "The mice treated in the study showed an average of 50 percent improvement on standard vision tests, with no detectable off-target effects after six months of monitoring. In a subset of animals, the improvement was sufficient to restore the ability to navigate mazes they had been unable to complete before treatment.",
+      "The researchers caution that mice and humans differ significantly in the architecture of the retina, and that clinical translation will require extensive safety testing. A proposal for a first-in-human trial is currently under preparation. If approved, it would be among the first epigenetic reprogramming trials ever conducted in humans.",
+      "✏️ Replace this paragraph with your own reporting on the implications for patients and the wider field."
+    ]
+  },
+
+  /* ── Business & Finance ── */
+  f1: {
+    tag:"Business",
+    headline:"Merger Creates Continent's Largest Logistics Network",
+    deck:"A forty-billion deal reshapes the supply chains of an entire hemisphere.",
+    byline:"By Business Correspondent · Frankfurt · March 10, 2026",
+    imgSrc:"Hapag.jpeg", imgAlt:"Logistics hub", caption:"Caption here.",
+    body:[
+      "The deal, valued at over forty billion and approved by regulators after eighteen months of review, will combine two longtime rivals whose combined fleets span more than sixty countries. The merged entity will become by a significant margin the continent's largest logistics and freight network.",
+      "The transaction was not without controversy. Three competition authorities required significant divestitures before granting approval, and several smaller operators have already applied for emergency review, arguing that the combined company will have pricing power sufficient to squeeze them from the market.",
+      { pullquote: '"We are not creating a monopoly. We are creating a network resilient enough to withstand the disruptions of the next decade." — Chief Executive, Combined Entity' },
+      "Industry analysts are divided. Some argue the merger will produce genuine efficiencies — shared infrastructure, reduced empty running, a single digital booking system — that will ultimately reduce costs for the businesses and consumers who rely on the network. Others warn that scale without competition is a recipe for complacency.",
+      "The combined company has announced plans to invest twelve billion over five years in electric and hydrogen-powered vehicles, which would make it the largest single private investor in zero-emission freight on the continent. Whether that commitment survives the pressures of a public listing — planned for next year — remains to be seen.",
+      "✏️ Replace this paragraph with your own business reporting or stakeholder reactions."
+    ]
+  },
+
+  f2: {
+    tag:"Finance",
+    headline:"Cryptocurrency Regulation Bill Passes First Reading",
+    deck:"The most comprehensive crypto oversight framework yet proposed moves forward.",
+    byline:"By Finance Desk · Brussels · March 10, 2026",
+    imgSrc:"Stablecoin.webp", imgAlt:"Parliament chamber", caption:"Caption here.",
+    body:[
+      "Lawmakers passed the most comprehensive cryptocurrency oversight framework yet proposed anywhere in the world, drawing cautious praise from mainstream exchanges and fierce resistance from advocates of decentralisation who argue the legislation misunderstands the technology it seeks to govern.",
+      "The bill, which cleared its first parliamentary hurdle by a margin of 312 to 204, would require all digital asset service providers to register with a central authority, maintain capital reserves, and submit to regular audits. Transactions above a threshold would require identity verification equivalent to that applied to bank transfers.",
+      { pullquote: '"You cannot have a financial system within the financial system that operates without rules. That experiment is over." — Finance Committee Chair' },
+      "The cryptocurrency industry's response has been fragmented. Large, exchange-based platforms, which already operate compliance functions, have broadly welcomed the legislation as a framework that will legitimise the sector in the eyes of institutional investors. Developers of decentralised protocols, by contrast, argue that the rules are technically unenforceable and would simply push activity offshore.",
+      "The bill faces two more readings and a committee stage before it can become law. Amendments are expected to significantly alter several provisions, particularly those relating to decentralised finance and the classification of digital tokens as securities.",
+      "✏️ Replace this paragraph with your own reporting on the regulatory timeline or market reaction."
+    ]
+  },
+
+  f3: {
+    tag:"Retail",
+    headline:"High Street Footfall Rises for First Time in Six Quarters",
+    deck:"A combination of experience-led shopping and habit shifts may be reversing the decade-long decline.",
+    byline:"By Retail Correspondent · London · March 10, 2026",
+    imgSrc:"wet-weather.avif", imgAlt:"High street", caption:"Caption here.",
+    body:[
+      "Retail analysts say a combination of experience-led shopping, post-pandemic habit shifts, and a new generation of independent traders is finally reversing what many had considered an inexorable decline. Footfall on monitored high streets rose 3.2 percent in the quarter compared with the same period last year — the first positive reading in eighteen months.",
+      "The recovery is not evenly distributed. Town centres that have invested in public space, cultural programming, and a diverse mix of independents alongside mainstream brands are outperforming those that have not. Several analysts have begun describing the successful examples as 'destination streets' rather than shopping streets — places where people come to spend time as much as money.",
+      { pullquote: '"The high street that competes on product selection alone lost that fight ten years ago. The ones that are coming back are competing on experience." — Retail Economist' },
+      "Food and beverage remains the anchor category, accounting for nearly half of all visits. But health and wellness, independent bookshops, craft and artisan goods, and repair services — once considered niche — are growing faster than any other segment.",
+      "Vacancy rates, while still elevated, fell for the second consecutive quarter. Several local authorities are reporting renewed developer interest in town centre conversion projects, with mixed-use developments combining residential, workspace, and retail seen as a more resilient model than the single-use retail shed that characterised the previous era.",
+      "✏️ Replace this paragraph with your own retail reporting or local case studies."
+    ]
+  },
+
+  /* ── Arts & Society ── */
+  g1: {
+    tag:"Arts",
+    headline:"Retrospective Rediscovers a Painter Erased from History",
+    deck:"A forgotten modernist finally gets her due after decades in the archive.",
+    byline:"By Arts Correspondent · Paris · March 10, 2026",
+    imgSrc:"hilma.jpg", imgAlt:"Gallery", caption:"Caption here. Credit: Gallery / Photographer",
+    body:[
+      "The exhibition draws together over ninety canvases from collections across Europe and two previously unknown private holdings, revealing a body of work that scholars now argue fundamentally anticipated the movements that subsequently eclipsed it. The painter, who died in relative obscurity in 1961, has been described by the show's curator as 'the most important artist you have never heard of.'",
+      "She was present at almost every significant gathering of the European avant-garde between the wars, documented in photographs, mentioned in letters, and yet almost entirely absent from the standard histories. The reasons are not mysterious. She was a woman in a world that systematically excluded women from canonical status, and she was Jewish in a world that sought to exterminate them.",
+      { pullquote: '"The gap in the art history books is not an accident. It is a wound. This exhibition is part of the process of healing it." — Exhibition Curator' },
+      "The paintings themselves demand attention on purely aesthetic terms. Large-scale works from the 1930s, executed in a palette that anticipates both abstract expressionism and colour field painting, have been displayed together for the first time in decades, revealing a coherence and ambition that the piecemeal distribution of her work across collections had obscured.",
+      "The retrospective runs until September and is expected to travel to four other institutions. A monograph, the first dedicated study of the artist's work, will be published to coincide with the opening of the second venue. Auction houses have already noted a sharp increase in enquiries about works attributed to her.",
+      "✏️ Replace this paragraph with your own arts reporting or critic's response to the exhibition."
+    ]
+  },
+
+  g2: {
+    tag:"Society",
+    headline:"The Four-Day Week: One Year On, Results Are Mixed",
+    deck:"Firms that adopted the compressed schedule report gains — but not everyone agrees.",
+    byline:"By Society Desk · Dublin · March 10, 2026",
+    imgSrc:"fourday.jpeg", imgAlt:"Office", caption:"Caption here.",
+    body:[
+      "A year after the landmark pilot concluded, a third of participating companies have made the four-day week permanent. Another third have quietly reverted to five days, citing productivity concerns, coordination difficulties, and — in several cases — customer and client pressure. The remainder are still counting the cost.",
+      "The headline figures from the pilot were striking: 91 percent of employees reported improved wellbeing, absenteeism fell by an average of 22 percent, and staff turnover dropped sharply. Revenue figures, where disclosed, showed no significant decline. Taken at face value, the results appeared to validate the central claim of the campaign.",
+      { pullquote: '"The productivity gains are real. But they are not evenly distributed, and the organisations that benefited most were those that invested seriously in restructuring how they worked, not just in reducing hours." — Lead Researcher, Pilot Study' },
+      "The complications emerged gradually. Some roles — client-facing positions, manufacturing floor supervisors, healthcare workers — proved difficult to compress without simply shifting pressure to colleagues. In a number of firms, the actual effect was that junior staff continued to work five days but were expected to demonstrate the output of five in four.",
+      "The most common reason given by companies that reverted was not productivity but complexity: coordinating meetings, managing client expectations, and maintaining institutional continuity across a four-day window proved more demanding than anticipated. Several said they would consider a phased or hybrid approach rather than a blanket policy.",
+      "✏️ Replace this paragraph with your own reporting on specific companies or employee experiences."
+    ]
+  },
+
+  /* ── Technology & Innovation ── */
+  h1: {
+    tag:"Technology",
+    headline:"Hospital Network Struck by Ransomware Attack Across Five Cities",
+    deck:"The most coordinated attack on healthcare infrastructure seen on the continent.",
+    byline:"By Tech Correspondent · Berlin · March 10, 2026",
+    imgSrc:"cybersec.avif", imgAlt:"oracle", caption:"Oracle's logo.",
+    body:[
+      "Patient records were locked across fourteen facilities in five cities in what officials described as the most coordinated ransomware attack on healthcare infrastructure the continent has seen. Emergency departments in three hospitals were forced to revert to paper records, and two elective surgery programmes were suspended as IT teams worked to contain the breach.",
+      "The attack, which began in the early hours of Saturday morning, exploited a vulnerability in a widely used scheduling software package that a security patch had been available to fix for six months. Initial analysis suggests that the attackers had been present in the network for at least three weeks before activating the ransomware.",
+      { pullquote: '"The question is not why they attacked a hospital. The question is why the hospital was this easy to attack." — Cybersecurity Analyst' },
+      "The ransom demand, denominated in cryptocurrency, has not been disclosed by the authorities, who say they are working with federal agencies and international partners to identify the perpetrators. Two previous attacks with similar characteristics have been attributed to a group with links to organised crime, though no official attribution has been made in this case.",
+      "Patient safety was not directly compromised, authorities said, though they acknowledged that delays in accessing records 'added risk' to several clinical decisions made in the immediate aftermath of the attack. Three patients whose procedures were postponed are being monitored, and no adverse outcomes have been reported.",
+      "✏️ Replace this paragraph with your own cybersecurity reporting or expert recommendations."
+    ]
+  },
+
+  h2: {
+    tag:"Media & Telecom",
+    headline:"Solid-State Battery Breakthrough Promises EV Range of 900km",
+    deck:"Engineers claim their prototype retains 92% capacity after a thousand charge cycles.",
+    byline:"By Science Desk · Tokyo · March 10, 2026",
+    imgSrc:"at&t.avif", imgAlt:"at&t", caption:"Caption here.",
+    body:[
+      "Engineers at the laboratory claim their prototype retains 92 percent capacity after a thousand charge cycles — a figure that, if replicated in commercial production, would make long-range electric travel viable at scale and address the single most persistent objection to electric vehicle adoption.",
+      "Solid-state batteries replace the liquid electrolyte found in conventional lithium-ion cells with a solid material, eliminating the flammability risk, improving energy density, and — crucially — reducing the degradation that limits the useful lifespan of current EV batteries. Several manufacturers have been working towards commercialisation for years, but consistency at scale has proved elusive.",
+      { pullquote: '"The chemistry works. Making it work ten million times in a row, at the same cost as what we have now — that is the engineering challenge remaining." — Battery Researcher' },
+      "The laboratory has filed patents covering seventeen distinct aspects of its manufacturing process. A licensing agreement with two vehicle manufacturers has reportedly been in negotiation for several months. Whether those manufacturers will move to full integration or use the technology as a supplement to existing platforms is not yet clear.",
+      "Analysts caution that the gap between laboratory demonstration and mass production has defeated many previous battery breakthroughs. The materials required for the solid electrolyte layer are currently expensive to produce at the required purity, and the manufacturing tolerances are significantly tighter than those of existing cell production lines.",
+      "✏️ Replace this paragraph with your own analysis of the timeline to commercial deployment."
+    ]
+  },
+
+  h3: {
+    tag:"Future",
+    headline:"The City That Runs Entirely on Rainwater",
+    deck:"A Singaporean district shows the world what radical water independence looks like.",
+    byline:"By Infrastructure Desk · Singapore · March 10, 2026",
+    imgSrc:"", imgAlt:"Urban water canals", caption:"Caption here.",
+    body:[
+      "Every drop that falls on the district's rooftops, roads, and green spaces is captured, filtered, and recirculated through a network of bio-canals and underground reservoirs. Residents of the nine-block development have not paid a water bill in three years. The district's water authority has not drawn a single litre from the municipal mains in eighteen months.",
+      "The system, which took eight years to design and build, relies on a combination of technologies none of which are individually new. Constructed wetlands filter grey water. Underground cisterns store rainfall equivalent to six months of demand. Smart metering identifies waste in real time and triggers micro-adjustments in pressure and flow across the network.",
+      { pullquote: '"What we built is not a technology. It is an ecosystem. The technology is just the way we listen to it." — Chief Water Engineer' },
+      "The cost of implementation was roughly three times that of a conventional water system. Designers say that within fifteen years of operation, the capital cost will be recovered through avoided infrastructure charges, and the system will then run effectively for free except for maintenance.",
+      "Several cities in water-stressed regions have sent delegations to study the model. A scaled version is under discussion for a new development zone in one Middle Eastern capital, where the combination of high rainfall variability and rapid urbanisation makes the approach particularly relevant.",
+      "✏️ Replace this paragraph with your own infrastructure reporting or city planning context."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — MONDAY MARCH 9
+  ══════════════════════════════════ */
+  "mar09-lead": {
+    tag:"World",
+    headline:"Ceasefire Announced After Six-Day Standoff at the Border",
+    deck:"Negotiators praised a breakthrough many had considered impossible 48 hours earlier.",
+    byline:"By Foreign Desk · Monday, March 9, 2026",
+    imgSrc:"", imgAlt:"Border crossing", caption:"Caption here. Credit: Photographer",
+    body:[
+      "A ceasefire was announced at 03:14 local time after a final marathon negotiating session that lasted twenty-two hours without a break. Senior diplomats from three mediating nations signed as witnesses. Both sides are reported to have wept in the room — though whether from relief, exhaustion, or something more complicated, no one was prepared to say on the record.",
+      "The agreement calls for an immediate halt to hostilities, a withdrawal of forces to pre-crisis positions within seventy-two hours, and the establishment of a joint monitoring commission whose composition will be agreed in the coming week. Humanitarian corridors, which had been closed for four days, were reopened within an hour of the announcement.",
+      { pullquote: '"This is not peace. This is the beginning of the possibility of peace. There is a great deal of work still to be done." — Chief Mediator' },
+      "The conditions that produced the crisis have not been resolved, and analysts caution that previous ceasefires in this region have collapsed within weeks when the underlying political disagreements reasserted themselves. Both governments face domestic pressures — from hardliners who consider the deal a capitulation, and from civilians who want assurance that it will hold.",
+      "Relief organisations moved quickly to take advantage of the reopened corridors, with convoys carrying food, medicine, and emergency shelter materials crossing the border before dawn. The needs are described as acute, with an estimated 200,000 people having been displaced in the six days of the standoff.",
+      "✏️ Replace this paragraph with your own international reporting or follow-up on the monitoring process."
+    ]
+  },
+  "mar09-a1": {
+    tag:"Health",
+    headline:"New Study Links Sleep Deprivation to Accelerated Aging",
+    deck:"Researchers say the findings should prompt a rethink of workplace culture.",
+    byline:"By Health Correspondent · March 9, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "A large-scale longitudinal study tracking more than 30,000 adults over fifteen years has established the clearest link yet between chronic sleep deprivation and accelerated biological ageing — measurable at the cellular level in participants who consistently sleep fewer than six hours per night.",
+      "The study, published in one of the field's most prestigious journals, found that sleep-deprived participants showed telomere shortening — a marker of cellular age — at a rate consistent with being three to five years older than their chronological age. The effect was present across all demographic groups and persisted after controlling for diet, exercise, and pre-existing conditions.",
+      { pullquote: '"The body treats sleep debt like any other form of physiological stress. It extracts a cost at the cellular level that accumulates over time." — Lead Author' },
+      "The implications for workplace culture are significant, researchers said. In many professional environments, short sleep is normalised or even celebrated as evidence of dedication. The data suggest this comes at a cost that is not borne by the employer but by the employee — in the form of measurably accelerated physical deterioration.",
+      "Several occupational health bodies have already cited the study in calls for statutory guidance on maximum working hours and mandatory rest periods. The response from business groups has been cautious, with most emphasising individual choice while acknowledging the weight of the evidence.",
+      "✏️ Replace this paragraph with your own health reporting or expert commentary."
+    ]
+  },
+  "mar09-a2": {
+    tag:"Sport",
+    headline:"City Clinch Title with Dramatic Late Winner",
+    deck:"A 94th-minute goal sealed a championship that seemed lost.",
+    byline:"By Sports Desk · March 9, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The ball struck the underside of the bar and crossed the line with six seconds to spare, triggering scenes of delirium in the stands and a pitch invasion that stewards were powerless to prevent. City had done the impossible — coming from two goals down with twelve minutes to play to win the title they had seemed certain to surrender.",
+      "The comeback was not merely dramatic. It was, by any measure, improbable. The visiting side had defended deep and efficiently, required almost nothing of their goalkeeper in the second half, and seemed to be managing the game toward a comfortable win. Three minutes was all it took to unravel it.",
+      { pullquote: '"I have been in football for thirty years. I have never felt anything like that dressing room after the final whistle." — Head Coach' },
+      "The title is the club's fifth in eight years but the first won in this particular fashion — in the final minute of the final game of the season, on goal difference, in front of a crowd that had been prepared for disappointment. Several players were unable to speak in the immediate aftermath.",
+      "The manager, who has faced persistent speculation about his future throughout the season, said only that he was proud of his players and would discuss his contract situation 'at the appropriate time.' The club's hierarchy declined to comment.",
+      "✏️ Replace this paragraph with your own sports reporting or post-match analysis."
+    ]
+  },
+  "mar09-a3": {
+    tag:"Technology",
+    headline:"Social Platform Announces End to Algorithmic Feed by Default",
+    deck:"Users will see posts in chronological order unless they opt in to recommendations.",
+    byline:"By Tech Correspondent · March 9, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The platform announced that it will switch its default feed to chronological order from next month, reversing a decision made eight years ago that transformed the social media landscape and, critics argue, contributed to a decade of polarisation, anxiety, and misinformation.",
+      "The move comes after sustained regulatory pressure in three jurisdictions, a series of damaging internal research leaks, and a user survey that found 71 percent of respondents preferred to control their own feed rather than have it curated by an algorithm they could not inspect or override.",
+      { pullquote: '"We are giving control back to users. What they do with that control is up to them." — Chief Product Officer' },
+      "Digital rights groups welcomed the announcement but cautioned that a chronological default is not the same as removing algorithmic amplification from the platform entirely. Sponsored content, trending topics, and notification systems all continue to shape attention in ways that are not transparent to users.",
+      "Advertisers have expressed concern that the change will reduce the effectiveness of targeted campaigns, which depend on algorithmic distribution to reach specific audience segments. The platform said it would release revised advertising tools to compensate.",
+      "✏️ Replace this paragraph with your own technology reporting or analysis of the industry implications."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — SUNDAY MARCH 8
+  ══════════════════════════════════ */
+  "mar08-lead": {
+    tag:"Culture",
+    headline:"The Painting That Vanished for 80 Years Returns to Public View",
+    deck:"A masterwork presumed lost resurfaces at auction, sparking a legal battle over ownership.",
+    byline:"By Arts Correspondent · Sunday, March 8, 2026",
+    imgSrc:"", imgAlt:"Painting", caption:"Caption here. Credit: Gallery",
+    body:[
+      "The work, which disappeared from a private collection in 1944 under circumstances that remain disputed, was offered at auction with an estimate described by observers as 'optimistic' and sold within ninety seconds of bidding opening. The hammer price has not been disclosed, but sources present in the room suggest it set a new record for the artist.",
+      "Within hours of the sale being announced, three separate legal claims had been filed in as many jurisdictions. Two are from the heirs of families who argue the painting was looted during the war. The third is from a private foundation that claims it purchased the work in good faith in 1962 and has documentary evidence to prove it.",
+      { pullquote: '"This painting is not a commodity. It is a piece of our family\'s history. We will pursue this in every court that will hear us." — Descendant of Original Owner' },
+      "Art restitution lawyers say the case is unusually complex because the provenance chain contains at least two documented gaps of more than a decade each, during which the painting's whereabouts are entirely unknown. Establishing which of the competing claims has the strongest legal footing will require forensic analysis of documents in at least four languages across three archives.",
+      "The auction house, which says it conducted due diligence before consigning the work, has declined to comment on the specific claims but confirmed it is cooperating with all legal processes. The buyer, identified only as a private collector, has reportedly indicated a willingness to 'engage in good faith dialogue' with the claimants.",
+      "✏️ Replace this paragraph with your own arts or legal reporting on the restitution process."
+    ]
+  },
+  "mar08-a1": {
+    tag:"Environment",
+    headline:"Record Temperatures Recorded Across Three Continents",
+    deck:"Scientists warn last week's figures represent a new and troubling baseline.",
+    byline:"By Environment Desk · March 8, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "Temperature records were broken in 47 separate locations across three continents last week, with several stations in the northern hemisphere recording figures that exceeded previous March highs by margins considered statistically extraordinary — not outliers, in the assessment of several climatologists, but indicators of a shifted baseline.",
+      "The readings are consistent with the trajectory projected by models that incorporate both greenhouse gas concentration data and ocean heat accumulation — two variables whose combined effect is beginning to manifest in surface temperatures in ways that were predicted but are arriving faster than the median forecast.",
+      { pullquote: '"We do not say this lightly: the climate is no longer behaving in the range our predecessors planned for. We are in a new chapter." — Director, National Meteorological Institute' },
+      "The practical consequences were immediate in several regions. Wildfire risk warnings were issued across four countries. Emergency water restrictions came into effect in two river systems already running below seasonal norms. One alpine resort announced the permanent closure of a ski run that has operated continuously since 1931.",
+      "The data have reignited debate about the gap between the ambitions of international climate agreements and the emissions trajectories of signatory nations. A summary briefing to the UN will be circulated this week, ahead of a preparatory session for the next major conference.",
+      "✏️ Replace this paragraph with your own environmental reporting or scientific commentary."
+    ]
+  },
+  "mar08-a2": {
+    tag:"Politics",
+    headline:"Two Ministers Resign Over Undisclosed Financial Interests",
+    deck:"A transparency scandal shakes the cabinet just weeks before a vote of confidence.",
+    byline:"By Political Correspondent · March 8, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "Two senior ministers resigned from the cabinet on Sunday evening after it emerged that both had held undisclosed financial interests in companies that received government contracts during their tenure. The resignations came six hours after the prime minister's office indicated it would defend them — a reversal that observers described as chaotic.",
+      "The interests, which amount to a combined shareholding valued at approximately four million, had not been declared in the register of ministers' interests, which is a legal requirement. Both ministers said the omission was inadvertent, a characterisation that opposition parties described as implausible given the size of the holdings.",
+      { pullquote: '"Inadvertent does not mean inconsequential. The public is entitled to know when those who make decisions about public contracts stand to benefit from them." — Leader of the Opposition' },
+      "The scandal adds to a difficult period for the administration, which faces a confidence vote in the assembly next month. Until this weekend, the government was considered odds-on to survive. That calculation has shifted, with several wavering backbenchers saying they would need 'clear answers' before committing their support.",
+      "An independent ethics inquiry has been announced, to report within thirty days. Opposition parties say the timeline is too slow and have called for an immediate suspension of the contracts in question pending review.",
+      "✏️ Replace this paragraph with your own political reporting or background on the contracts in question."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — SATURDAY MARCH 7
+  ══════════════════════════════════ */
+  "mar07-lead": {
+    tag:"Politics",
+    headline:"Election Commission Certifies Results Amid Protests",
+    deck:"Crowds gathered outside the capital as officials confirmed the final tally.",
+    byline:"By Political Correspondent · Saturday, March 7, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The Election Commission formally certified the results of last month's general election on Saturday, confirming the governing coalition's narrow majority despite ongoing protests outside the capital's civic buildings and a formal challenge filed by the largest opposition party.",
+      "The certification process, which required the manual verification of more than 200,000 disputed ballots, concluded at 14:30 local time. The commission's chair read the final figures in a brief statement and declined to take questions, citing security concerns.",
+      { pullquote: '"The people have spoken. We accept the result and we will govern for all citizens — including those who did not vote for us." — Prime Minister-elect' },
+      "Protest organisers said they would continue their demonstrations until an independent judicial review of the disputed ballots was completed. The Commission has referred the opposition's formal challenge to the Electoral Court, which is expected to rule within three weeks.",
+      "International observers from four monitoring organisations issued statements broadly affirming the integrity of the vote, while noting 'procedural irregularities' in three districts that they said warranted review. None of the observers used language suggesting that the irregularities were sufficient to affect the overall outcome.",
+      "✏️ Replace this paragraph with your own political reporting or analysis of the post-election period."
+    ]
+  },
+  "mar07-a1": {
+    tag:"Economy",
+    headline:"Central Bank Holds Rates as Inflation Ticks Up Unexpectedly",
+    deck:"A surprise rise in the consumer price index complicates the path to easing.",
+    byline:"By Finance Desk · March 7, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The central bank held its benchmark rate unchanged at its scheduled meeting on Friday, as widely expected, but the accompanying statement struck a notably more cautious tone after fresh data showed consumer price inflation rising 0.3 percentage points above the previous month's figure.",
+      "The surprise uptick, driven primarily by energy and food prices, is not in itself alarming to economists, who note that month-to-month volatility in those categories is common. What concerns some analysts is the breadth of the move: core inflation, which excludes food and energy, also edged up slightly, suggesting that price pressures have not yet fully subsided.",
+      { pullquote: '"The last mile is always the hardest. Getting inflation from eight percent to three percent was the easy part. Getting it from three percent to two is where central banks have historically made their mistakes." — Chief Economist' },
+      "Markets had been pricing in a cut at the next meeting with roughly 65 percent probability before the data were released. That figure fell to under 40 percent by the close of trading on Friday, reflecting a reassessment of the timeline rather than a fundamental shift in the direction of policy.",
+      "The committee's next meeting is scheduled for six weeks' time, and members will have two more sets of inflation data to consider before then. Whether those readings confirm the uptick as a blip or the beginning of a second wave will determine whether the anticipated easing cycle begins this quarter or is deferred.",
+      "✏️ Replace this paragraph with your own economic reporting or market analysis."
+    ]
+  },
+  "mar07-a2": {
+    tag:"Science",
+    headline:"Fungal Network Beneath Old Growth Forest Mapped for First Time",
+    deck:"The mycelial web that sustains the trees is stranger and more vast than science had imagined.",
+    byline:"By Science Correspondent · March 7, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "Scientists have produced the first comprehensive map of the mycorrhizal network connecting the root systems of an old-growth forest, revealing a communications and nutrient-exchange architecture of staggering complexity that challenges some of the most basic assumptions about how forests survive and grow.",
+      "The map, produced using a combination of ground-penetrating sensors, environmental DNA sampling, and a novel computational modelling technique, covers an area of 340 hectares and shows individual fungal filaments connecting thousands of trees, some separated by distances of more than a kilometre.",
+      { pullquote: '"The forest is not a collection of trees. It is an organism. The trees are its visible parts. This is what holds it together." — Lead Researcher' },
+      "The network appears to function as a redistribution system: established trees channel surplus carbon to seedlings in shade, stressed trees receive additional nutrients during dry periods, and diseased individuals are apparently quarantined by changes in fungal connectivity that prevent the spread of pathogens.",
+      "The researchers are cautious about the implications, noting that the study covers a single site and that networks in different forest types may behave differently. But the findings add substantial empirical weight to a body of theory that has, until now, relied largely on laboratory experiments and small-scale field studies.",
+      "✏️ Replace this paragraph with your own science reporting or commentary on conservation implications."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — FRIDAY MARCH 6
+  ══════════════════════════════════ */
+  "mar06-lead": {
+    tag:"Economy",
+    headline:"Tech Giant Posts Largest Quarterly Loss in Company History",
+    deck:"Shares fell sharply as analysts revised forecasts and questions multiplied about strategy.",
+    byline:"By Business Desk · Friday, March 6, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The company reported a quarterly loss of 4.2 billion after the close of trading on Thursday, the largest in its twenty-two-year history and nearly double what analysts had forecast. Shares fell eleven percent in after-hours trading and were expected to open significantly lower on Friday.",
+      "The loss was driven primarily by a combination of factors: slowing growth in the company's core advertising business, a write-down of 1.8 billion on an acquisition made eighteen months ago, and a charge related to a regulatory settlement that had been disclosed in outline but whose size exceeded expectations.",
+      { pullquote: '"The fundamentals of the business remain strong. One difficult quarter does not define a company. We will address what needs to be addressed." — Chief Executive' },
+      "Analysts were not reassured. Several revised their twelve-month price targets downward, with two large brokerages moving the stock to underperform. The consensus view that emerged from the flurry of notes published after the results call was that the company's problems are structural rather than cyclical — that it has not moved fast enough to diversify away from revenue streams under regulatory and competitive pressure.",
+      "The board is understood to be conducting a strategic review, with a report expected before the next earnings call. Whether that review results in significant leadership or structural changes, or represents a more modest exercise in optics management, remains to be seen.",
+      "✏️ Replace this paragraph with your own business reporting or shareholder reaction."
+    ]
+  },
+  "mar06-a1": {
+    tag:"World",
+    headline:"Earthquake Strikes Remote Mountain Region; Rescue Effort Begins",
+    deck:"Dozens of villages are cut off as aftershocks continue to hamper access.",
+    byline:"By News Desk · March 6, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "A 6.8 magnitude earthquake struck a remote mountain region on Thursday evening, killing at least 47 people and injuring more than 200, with the death toll expected to rise as rescue teams reach villages that have been cut off by landslides triggered by the initial shock and its aftershocks.",
+      "The epicentre was located twelve kilometres from the nearest town, in an area characterised by steep terrain, isolated settlements, and a building stock that engineers have long identified as highly vulnerable to seismic events. Several communities in the affected zone had been flagged in a government risk assessment three years ago as priorities for retrofit programmes that were never fully funded.",
+      { pullquote: '"We knew these villages were at risk. The reports are there. The question that needs to be answered is why the money was not spent." — Relief Organisation Director' },
+      "Military helicopters began reaching the most remote locations by Friday morning, bringing search equipment and medical supplies. Access by road remains impossible on four of the main approaches, and engineers say clearing the landslides will take at least seventy-two hours under good weather conditions.",
+      "International rescue teams from three neighbouring countries have offered assistance and are awaiting government authorisation to deploy. A coordinating centre has been established in the nearest city. The government has declared a state of emergency in the affected provinces.",
+      "✏️ Replace this paragraph with your own disaster reporting or humanitarian update."
+    ]
+  },
+  "mar06-a2": {
+    tag:"Culture",
+    headline:"Streaming Service Reports Decline as Viewers Return to Broadcast",
+    deck:"The subscription model faces its first sustained challenge in a decade.",
+    byline:"By Culture Correspondent · March 6, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The platform reported its first significant net subscriber loss since launch, shedding 2.3 million accounts in the quarter — a figure that sent its share price down eight percent and prompted analysts to ask whether the golden age of streaming may have peaked.",
+      "The decline followed a series of price increases, a crackdown on account sharing that was more disruptive than the company had anticipated, and what several media analysts described as a content drought — a period in which no single original programme generated the cultural momentum of earlier years.",
+      { pullquote: '"The platform built its identity on one show at a time. Right now there is no show. And subscribers notice." — Media Industry Analyst' },
+      "Meanwhile, broadcast viewing figures have risen for the third consecutive quarter, driven partly by live sport and partly by a generation that grew up with streaming and is, paradoxically, now drawn to the shared experience of watching something simultaneously with other people.",
+      "The company said it would respond by accelerating its release schedule, investing more in interactive formats, and exploring live sports rights — a category it has historically avoided due to cost. Whether these measures can reverse the trend, or whether the decline reflects a structural shift in viewing habits, is the question that will define the next chapter of its history.",
+      "✏️ Replace this paragraph with your own media reporting or analysis."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — THURSDAY MARCH 5
+  ══════════════════════════════════ */
+  "mar05-lead": {
+    tag:"Science",
+    headline:"First Images From Deep-Space Telescope Revealed",
+    deck:"Astronomers describe scenes of staggering beauty from the edge of the observable universe.",
+    byline:"By Science Correspondent · Thursday, March 5, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The first images from the new generation space telescope were released at a packed press conference, prompting a reaction from the scientific community that oscillated between the analytical and the openly emotional. Astronomers who have spent careers waiting for this level of resolution stood in a conference room and were, by several accounts, unable to speak.",
+      "The images show structures at a distance equivalent to roughly 13.4 billion light years — light that left its source before the Earth existed. They reveal, at a resolution previously impossible, the earliest galaxies in the known universe and the filamentary structures of dark matter that appear to have scaffolded their formation.",
+      { pullquote: '"We are looking at the universe when it was 400 million years old. Everything we thought we understood about that era will need to be revised." — Mission Astrophysicist' },
+      "Unexpectedly, several of the early galaxies in the images are significantly larger and more structurally organised than current models predict they should be at this age. The finding is consistent with anomalies noted in earlier telescope data but now confirmed at an altogether different level of precision.",
+      "The telescope, which took eleven years to build and deploy, is now in a stable orbit at the second Lagrange point, a million miles from Earth. Its primary mirror is nearly three times the collecting area of its predecessor, and its infrared sensitivity allows it to peer through the gas and dust that obscured earlier observations.",
+      "✏️ Replace this paragraph with your own science reporting or commentary on the cosmological implications."
+    ]
+  },
+  "mar05-a1": {
+    tag:"Society",
+    headline:"Loneliness Declared a Public Health Emergency in Three Nations",
+    deck:"Governments respond to research showing the condition rivals smoking as a mortality risk factor.",
+    byline:"By Society Desk · March 5, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "Three countries formally declared loneliness a public health emergency on Wednesday, citing a growing body of evidence that chronic social isolation carries physiological risks comparable to those of smoking fifteen cigarettes a day — a comparison that has proved effective in focusing policy attention on a condition previously considered primarily a social or emotional concern.",
+      "The declarations trigger emergency funding mechanisms and require health ministries to develop loneliness reduction strategies within six months. The approach follows a model pioneered by one nation that appointed a dedicated minister for loneliness six years ago and has since seen measurable improvements in social connection metrics.",
+      { pullquote: '"Loneliness is not a feeling. It is a health condition with a mortality risk we can measure. It needs to be treated with the same urgency as any other epidemic." — Public Health Director' },
+      "The most affected groups, according to the research underpinning the declarations, are not the elderly — as popular perception often assumes — but adults between 20 and 35, who report the highest rates of chronic loneliness in survey after survey. The conditions of modern urban life, remote work, and digital socialisation appear to be contributing factors.",
+      "Proposed interventions include community infrastructure investment, social prescribing programmes through primary care, and changes to planning policy to require more communal space in residential developments. Critics argue these are too modest and too slow. Advocates say they represent the beginning of a shift in how governments understand the relationship between built environments and wellbeing.",
+      "✏️ Replace this paragraph with your own reporting on community responses or expert perspectives."
+    ]
+  },
+  "mar05-a2": {
+    tag:"Business",
+    headline:"Airline Industry Profits Hit Post-Pandemic Record",
+    deck:"But the gains mask a structural divide between the top and bottom of the market.",
+    byline:"By Business Correspondent · March 5, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "The global airline industry is on course to record its highest profit since before the pandemic, driven by sustained demand for premium and business travel, improved operational discipline, and a more consolidated competitive landscape that has reduced the destructive price wars of the previous decade.",
+      "The headline figure, however, conceals a stark divide. The ten largest carriers account for more than 80 percent of industry profits, while the bottom half of the market — budget carriers and regional operators — remains in aggregate barely profitable or loss-making, squeezed between fuel costs, labour shortages, and the relentless price expectations of leisure travellers.",
+      { pullquote: '"We are a profitable industry that is also, in large parts, functionally broken. Those two things can be true simultaneously." — Industry Analyst' },
+      "The structural challenge is sharpest in short-haul Europe, where the combination of rising airport costs, carbon taxes, and the threat of rail substitution has compressed margins to near-zero for carriers whose business models were designed for a different regulatory and competitive era.",
+      "Several airlines have already announced the withdrawal from secondary routes that are no longer commercially viable. The affected communities — typically smaller cities and regional towns — have few alternatives and are lobbying for the kind of public service obligation frameworks that once kept essential routes open through subsidy.",
+      "✏️ Replace this paragraph with your own business reporting or policy analysis."
+    ]
+  },
+
+  /* ══════════════════════════════════
+     ARCHIVE — WEDNESDAY MARCH 4
+  ══════════════════════════════════ */
+  "mar04-lead": {
+    tag:"World",
+    headline:"Floods Displace Thousands Across Southern Region",
+    deck:"Aid organisations scramble as rivers breach their banks for the third time this season.",
+    byline:"By News Desk · Wednesday, March 4, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "An estimated 40,000 people have been displaced across the southern provinces after three days of sustained rainfall caused the main river system to breach its banks for the third time this season — a recurrence that relief coordinators describe as beyond any historical precedent and a sign that emergency response infrastructure designed for the conditions of the past is no longer adequate for the present.",
+      "Temporary shelters set up after the first flood in January are themselves inundated, forcing authorities to commandeer schools, sports halls, and community centres further inland. Several roads that were repaired following the January event have been washed out again, complicating the movement of supplies.",
+      { pullquote: '"We cannot keep rebuilding the same things in the same places and call it disaster response. We need to talk about permanent relocation for some of these communities." — Head of Emergency Management' },
+      "The government declared a state of emergency in four provinces and released emergency funds to local authorities for immediate relief operations. An international appeal is being prepared, with aid organisations citing needs across shelter, clean water, sanitation, and food security.",
+      "Hydrologists who monitor the river system say the frequency of flooding events this season is consistent with long-term trend data showing increased rainfall variability in the region. The drainage infrastructure, built to manage the conditions of forty years ago, is inadequate for a catchment that now receives both more rainfall and more of it falling in concentrated events.",
+      "✏️ Replace this paragraph with your own reporting on the affected communities or the humanitarian response."
+    ]
+  },
+  "mar04-a1": {
+    tag:"Technology",
+    headline:"Autonomous Vehicle Fleet Completes First Fully Driverless Urban Route",
+    deck:"The milestone marks a turning point in the commercialisation of self-driving technology.",
+    byline:"By Tech Correspondent · March 4, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "A fleet of ten autonomous vehicles completed a fully driverless urban route covering fourteen stops in a city centre environment for the first time on Tuesday, carrying a combined total of 312 passengers across a twelve-hour period without a single human safety intervention. The operator called the trial a milestone. Regulators called it the start of a process, not the end of one.",
+      "The vehicles used a combination of lidar, camera systems, and real-time mapping updates to navigate traffic, construction zones, cyclists, pedestrians, and at least two incidents involving improperly parked delivery vehicles. Passengers were given the option to end their journey early via an in-vehicle screen. None chose to do so.",
+      { pullquote: '"A thousand miles in a controlled environment means nothing. A thousand miles in a city, in the rain, at rush hour — that means something." — Chief Technology Officer' },
+      "Public reaction in the city was divided. Commuters who used the service described it as unremarkable in the best sense: the vehicles behaved predictably, matched or exceeded the punctuality of the existing bus service on the route, and were cleaner and quieter than conventional vehicles.",
+      "Trade unions representing transport workers have called for a moratorium on expansion pending a full assessment of the technology's employment implications. The operator says it intends to use autonomous vehicles to serve routes currently uneconomic to run with human drivers, rather than to replace existing services.",
+      "✏️ Replace this paragraph with your own technology reporting or commentary on the regulatory pathway."
+    ]
+  },
+  "mar04-a2": {
+    tag:"Arts",
+    headline:"Acclaimed Novelist Withdraws Debut Film Script Citing Creative Differences",
+    deck:"A high-profile falling-out raises questions about the adaptation of literary fiction.",
+    byline:"By Culture Correspondent · March 4, 2026",
+    imgSrc:"", imgAlt:"", caption:"",
+    body:[
+      "One of the most acclaimed novelists of her generation has publicly withdrawn her screenplay adaptation of her debut novel, citing irreconcilable differences with the production company over the handling of the story's central themes. The film, which had been in pre-production for two years, is now in indefinite suspension.",
+      "In a statement, the novelist said the script she had delivered was 'a version of the book I wrote,' while the version being prepared for production was 'a version of a book someone else had read.' She declined to specify the nature of the changes requested, saying only that they affected 'what the story is about at its core.'",
+      { pullquote: '"There is a version of this film I would be proud of. I was not being asked to make that version." — Novelist' },
+      "The production company issued a response describing the situation as 'regrettable' and expressing hope that an accommodation could still be reached. Industry observers read the statement as an acknowledgement that the project's commercial appeal — built largely on the novelist's name — would be significantly diminished without her involvement.",
+      "The dispute touches a persistent tension in literary adaptation: the question of how much fidelity to source material an author can reasonably expect from a medium governed by different commercial and structural imperatives. Several prominent screenwriters have commented publicly on the case, and opinions are sharply divided.",
+      "✏️ Replace this paragraph with your own arts reporting or analysis of the adaptation landscape."
+    ]
+  }
+
+};
+
+/* ══════════════════════════════════════════════════════
+   EDITIONS — archive day definitions
+   lead  = article key for featured story
+   cols  = array of article keys for the grid below it
+══════════════════════════════════════════════════════ */
+const EDITIONS = {
+  mar10: null,
+  mar09: {
+    date:"Monday, March 9, 2026", label:"Monday, March 9 — Archive",
+    lead:"mar09-lead", cols:["mar09-a1","mar09-a2","mar09-a3"]
+  },
+  mar08: {
+    date:"Sunday, March 8, 2026", label:"Sunday, March 8 — Archive",
+    lead:"mar08-lead", cols:["mar08-a1","mar08-a2"]
+  },
+  mar07: {
+    date:"Saturday, March 7, 2026", label:"Saturday, March 7 — Archive",
+    lead:"mar07-lead", cols:["mar07-a1","mar07-a2"]
+  },
+  mar06: {
+    date:"Friday, March 6, 2026", label:"Friday, March 6 — Archive",
+    lead:"mar06-lead", cols:["mar06-a1","mar06-a2"]
+  },
+  mar05: {
+    date:"Thursday, March 5, 2026", label:"Thursday, March 5 — Archive",
+    lead:"mar05-lead", cols:["mar05-a1","mar05-a2"]
+  },
+  mar04: {
+    date:"Wednesday, March 4, 2026", label:"Wednesday, March 4 — Archive",
+    lead:"mar04-lead", cols:["mar04-a1","mar04-a2"]
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   VIEW ROUTER
+══════════════════════════════════════════════════════ */
+let previousView = 'front';
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const t = document.getElementById('view-' + name);
+  if (t) t.classList.add('active');
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ══════════════════════════════════════════════════════
+   LOAD ARCHIVE EDITION
+══════════════════════════════════════════════════════ */
+function loadEdition(btn) {
+  const key = btn.dataset.key;
+  if (key === 'mar10') { showView('front'); return; }
+  const ed = EDITIONS[key];
+  if (!ed) { alert('Edition not found: ' + key); return; }
+  const lead = ARTICLES[ed.lead] || {};
+  let colsHTML = '';
+  if (ed.cols && ed.cols.length) {
+    const cards = ed.cols.map(id => {
+      const a = ARTICLES[id]; if (!a) return '';
+      return `<article class="article" onclick="openArticle('${id}')">
+        <div class="article-tag">${a.tag}</div>
+        <div class="article-img"><span class="img-ph">[ Insert Image ]</span></div>
+        <h2 class="article-headline lg">${a.headline}</h2>
+        <div class="article-byline">${a.byline}</div>
+        <p class="article-body">${String(a.body[0]||'').substring(0,160)}…</p>
+      </article>`;
+    }).join('');
+    colsHTML = `<hr class="h-rule-bold"><div class="section-label"><span>More Stories</span></div><div class="columns col-3">${cards}</div>`;
+  }
+  document.getElementById('archive-content').innerHTML = `
+    <div class="newspaper">
+      <header class="masthead">
+        <div class="newspaper-name"><span class="mast-icon">⚜</span> The Scaler Chronicles <span class="mast-icon">⚜</span></div>
+        <div class="tagline">"Bringing A Modern Touch To Retro Paper — Est. 2026"</div>
+        <div class="meta-bar"><span>${ed.date}</span><span style="font-style:italic">Archive Edition</span><span>$0</span></div>
+      </header>
+      <article class="article-featured" onclick="openArticle('${ed.lead}')">
+        <div class="article-tag">${lead.tag||''}</div>
+        <h1 class="article-headline xl" style="max-width:620px">${lead.headline||'Headline'}</h1>
+        <p class="article-deck">${lead.deck||''}</p>
+        <div class="article-byline">${lead.byline||''}</div>
+        <p class="article-body">${String((lead.body&&lead.body[0])||'').substring(0,220)}…</p>
+      </article>
+      ${colsHTML}
+      <footer class="newspaper-footer">
+        <span>© 2026 The Scaler Chronicles.</span>
+        <span>${ed.date} · Archive</span>
+        <span>Made by Shenz</span>
+      </footer>
+    </div>`;
+  document.getElementById('archive-label').textContent = ed.label;
+  previousView = 'archive';
+  showView('archive');
+}
+
+/* ══════════════════════════════════════════════════════
+   OPEN FULL ARTICLE
+══════════════════════════════════════════════════════ */
+function openArticle(id) {
+  const a = ARTICLES[id];
+  if (!a) { alert('Article not found: ' + id); return; }
+  document.getElementById('ap-tag').className = 'ap-tag';
+  document.getElementById('ap-tag').textContent = a.tag;
+  document.getElementById('ap-headline').className = 'ap-headline';
+  document.getElementById('ap-headline').textContent = a.headline;
+  document.getElementById('ap-deck').className = 'ap-deck';
+  document.getElementById('ap-deck').textContent = a.deck;
+  document.getElementById('ap-byline').className = 'ap-byline';
+  document.getElementById('ap-byline').textContent = a.byline;
+  let imgHTML = a.imgSrc
+    ? `<img class="ap-image" src="${a.imgSrc}" alt="${a.imgAlt||''}">`
+    : `<div class="ap-img-ph"><span>[ Image: set imgSrc in ARTICLES data ]</span></div>`;
+  if (a.caption) imgHTML += `<div class="ap-caption">${a.caption}</div>`;
+  document.getElementById('ap-img-wrap').innerHTML = imgHTML;
+  const bodyHTML = (a.body||[]).map(item =>
+    typeof item === 'string' ? `<p>${item}</p>`
+    : (item && item.pullquote) ? `<div class="ap-pullquote">${item.pullquote}</div>` : ''
+  ).join('');
+  document.getElementById('ap-body').className = 'ap-body';
+  document.getElementById('ap-body').innerHTML = bodyHTML;
+  const cur = document.querySelector('.view.active');
+  previousView = cur ? cur.id.replace('view-','') : 'front';
+  showView('article');
+}
+
+function goBack() { showView(previousView); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const art = document.getElementById('view-article');
+    if (art && art.classList.contains('active')) goBack();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[onclick^="openArticle("]').forEach(card => {
+    const match = card.getAttribute('onclick').match(/openArticle\('(.+?)'\)/);
+    if (!match) return;
+    const id = match[1];
+    const a = ARTICLES[id];
+    if (!a || !a.imgSrc) return;
+    const placeholder = card.querySelector('.article-img');
+    if (!placeholder) return;
+    placeholder.innerHTML = `<img src="${a.imgSrc}" alt="${a.imgAlt || ''}" style="width:100%;height:100%;object-fit:cover;filter:sepia(30%) contrast(1.05);display:block;">`;
+  });
+});
+</script>
+</body>
+</html>
